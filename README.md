@@ -1,2 +1,3 @@
 # Prefs
-Safe Key-Value storage in Swift
+
+A description of this package.
