@@ -13,22 +13,6 @@ protocol Repository {
 	func write(_ content: [String: String]) throws
 }
 
-class MemoryRepository: Repository {
-	var dict: [String: String]
-	
-	init(dict: [String : String] = [:]) {
-		self.dict = dict
-	}
-	
-	func read() throws -> [String: String] {
-		return dict
-	}
-	
-	func write(_ content: [String: String]) throws {
-		self.dict = content
-	}
-}
-
 struct ClearFileRepository: Repository {
 	let url: URL
 	

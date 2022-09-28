@@ -27,14 +27,10 @@ public class Prefs {
 	/// Initialize new Prefs instance link to a given url, and loading its content
 	/// - Parameter url: filepath in filesystem
 	/// - Parameter writeStrategy: Strategy for writing to the filesystem
-	public convenience init(url: URL, writeStrategy: WriteStrategyType = .batch) {
-		self.init(url: url, writeStrategy: writeStrategy, repository: ClearFileRepository(url: url))
-	}
-	
-	internal init(url: URL, writeStrategy: WriteStrategyType = .batch, repository: Repository) {
+	public init(url: URL, writeStrategy: WriteStrategyType = .batch) {
 		self.url = url
 		self.strategy = writeStrategy.createStrategy()
-		self.repository = repository
+		self.repository = ClearFileRepository(url: url)
 		
 		tryLoadContent()
 	}

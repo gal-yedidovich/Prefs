@@ -3,90 +3,94 @@ import Combine
 @testable import Prefs
 
 final class PrefsTests: XCTestCase {
-	func testShouldLoadValueOnInit() {
+	func testShouldInitWithEmptyValues() {
 		//Given
-		let EXPECTED_VALUE = "Bubu"
-		let content = [PrefKey.name.value: EXPECTED_VALUE]
-		let filename = #function
-		let url = url(from: filename)
-		let repository = MemoryRepository(dict: content)
+		let url = url(from: #function)
 		
 		//When
-		let prefs = Prefs(url: url, repository: repository)
+		let prefs = Prefs(url: url)
 		
 		//Then
-		XCTAssertEqual(prefs.dict, content)
+		XCTAssertEqual(prefs.dict, [:])
 	}
 	
-//	func testInsert() throws {
-//		let prefs = createPrefs()
-//		prefs.edit().put(key: .name, "Gal").commit()
-//
-//		XCTAssertEqual(prefs.string(key: .name), "Gal")
-//		afterWrite(at: prefs) { json in
-//			XCTAssertEqual(json[PrefKey.name.value], "Gal")
-//		}
-//
-//		try teardown(prefs)
-//	}
-//
-//	func testReplace() throws {
-//		let prefs = createPrefs()
-//
-//		prefs.edit()
-//			.put(key: .name, "Gal")
-//			.put(key: .age, 26)
-//			.commit()
-//
-//		prefs.edit().put(key: .name, "Bubu").commit()
-//
-//		XCTAssertEqual(prefs.string(key: .name), "Bubu")
-//		afterWrite(at: prefs) { json in
-//			XCTAssertEqual(json[PrefKey.name.value], "Bubu")
-//		}
-//
-//		try teardown(prefs)
-//	}
-//
-//	func testRemove() throws {
-//		let prefs = createPrefs()
-//
-//		prefs.edit()
-//			.put(key: .name, "Bubu")
-//			.put(key: .isAlive, true)
-//			.commit()
-//
-//		prefs.edit().remove(key: .isAlive).commit()
-//
-//		XCTAssertEqual(prefs.dict[PrefKey.isAlive.value], nil)
-//		afterWrite(at: prefs) { (json) in
-//			XCTAssertEqual(json[PrefKey.isAlive.value], nil)
-//		}
-//
-//		try teardown(prefs)
-//	}
-//
-//	func testClear() throws {
-//		let prefs = createPrefs()
-//
-//		prefs.edit()
-//			.put(key: .name, "Gal")
-//			.put(key: .age, 26)
-//			.commit()
-//
-//		prefs.edit().clear().commit()
-//
-//		let expectation = XCTestExpectation(description: "wait to delete Prefs")
-//		prefs.queue.async {
-//			XCTAssertEqual(prefs.dict.count, 0)
-//			XCTAssertFalse(Filer.fileExists(prefs.filename))
-//			expectation.fulfill()
-//		}
-//
-//		wait(for: [expectation], timeout: 2)
-//
-//		try teardown(prefs)
-//	}
+	func testShouldLoadValuesOnInit() throws {
+		//Given
+		let url: URL = url(from: #function)
+		let EXPECTED_CONTENT: [String: String] = ["Key": "Bubu"]
+		try writeContent(at: url, content: EXPECTED_CONTENT)
+		defer { remove(file: url) }
+		
+		//When
+		let prefs = Prefs(url: url)
+		
+		//Then
+		XCTAssertEqual(prefs.dict, EXPECTED_CONTENT)
+	}
+	
+	func testShouldInsertValue() async {
+		//Given
+		let url: URL = url(from: #function)
+		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		let EXPECTED_VALUE = "Bubu"
+		defer { remove(file: url) }
+		
+		//When
+		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
+		
+		//Then
+		XCTAssertEqual(prefs.dict[PrefKey.name.value], EXPECTED_VALUE)
+		let content = await syncRead(prefs)
+		XCTAssertEqual(content?[PrefKey.name.value], EXPECTED_VALUE)
+	}
+	
+	func testShouldReplaceValue() async throws {
+		//Given
+		let EXPECTED_VALUE = "Groot"
+		let url: URL = url(from: #function)
+		try writeContent(at: url, content: [PrefKey.name.value: "Bubu 1"])
+		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		defer { remove(file: url) }
+		
+		//When
+		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
+		
+		//Then
+		XCTAssertEqual(prefs.dict[PrefKey.name.value], EXPECTED_VALUE)
+		let dict = await syncRead(prefs)
+		XCTAssertEqual(dict?[PrefKey.name.value], EXPECTED_VALUE)
+	}
+	
+	func testShouldRemoveValue() async throws {
+		//Given
+		let url: URL = url(from: #function)
+		try writeContent(at: url, content: [PrefKey.name.value: "Bubu", "Key2": "some"])
+		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		
+		//When
+		prefs.edit().remove(key: .name).commit()
+		
+		//Then
+		XCTAssertNil(prefs.dict[PrefKey.name.value])
+		let dict = await syncRead(prefs)
+		XCTAssertNil(dict?[PrefKey.name.value])
+	}
+	
+	func testShouldClearAllValues() async throws {
+		//Given
+		let url = url(from: #function)
+		try writeContent(at: url, content: ["Key": "Bubu", "Key 2": "4"])
+		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		defer { remove(file: url) }
+		
+		//When
+		prefs.edit().clear().commit()
+		
+		//Then
+		XCTAssertEqual(prefs.dict, [:])
+		_ = await syncRead(prefs)
+		XCTAssertFalse(fileExists(at: url))
+	}
 //
 //	func testCodable() throws {
 //		let prefs = createPrefs()
@@ -293,13 +297,35 @@ private extension PrefsTests {
 //	}
 }
 
-func fileExists(at name: String) -> Bool {
-	let url = url(from: name)
+func writeContent(at url: URL, content: [String: String]) throws {
+	let json = try JSONEncoder().encode(content)
+	try json.write(to: url)
+}
+
+func syncRead(_ prefs: Prefs) async -> [String: String]? {
+	return await withUnsafeContinuation { continuation in
+		prefs.queue.async {
+			guard let data = try? Data(contentsOf: prefs.url) else {
+				continuation.resume(returning: nil)
+				return
+			}
+			let content = try? JSONDecoder().decode([String: String].self, from: data)
+			continuation.resume(returning: content)
+		}
+	}
+}
+
+func remove(file url: URL) {
+	try? FileManager.default.removeItem(at: url)
+}
+
+func fileExists(at url: URL) -> Bool {
 	return FileManager.default.fileExists(atPath: url.path)
 }
 
 func url(from name: String) -> URL {
-	URL(fileURLWithPath: name)
+	let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+	return dir.appendingPathComponent(name)
 }
 
 fileprivate typealias TestHandler = ([String:String]) -> Void
