@@ -8,6 +8,8 @@ import Foundation
 import Combine
 import os
 
+typealias PrefsContent = [String: String]
+
 public class Prefs {
 	public static let standard = {
 		let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -17,7 +19,7 @@ public class Prefs {
 
 	internal var logger: Logger { Logger(subsystem: "gal.SwiftExtensions", category: "Prefs") }
 	internal let queue = DispatchQueue(label: "prefs", qos: .background)
-	internal var dict: [String: String] = [:]
+	internal var dict: PrefsContent = [:]
 	internal let url: URL
 	internal let strategy: WriteStrategy
 	internal let repository: Repository
