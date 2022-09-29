@@ -48,7 +48,7 @@ fileprivate struct ImmediateWriteStrategy: WriteStrategy {
 	func commit(_ commit: Commit, to prefs: Prefs) {
 		prefs.queue.sync {
 			prefs.assign(commit)
-			prefs.queue.async(execute: prefs.writeOrDelete)
+			prefs.writeOrDelete()
 		}
 	}
 }

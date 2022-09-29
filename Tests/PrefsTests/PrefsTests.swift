@@ -29,7 +29,7 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(prefs.dict, EXPECTED_CONTENT)
 	}
 	
-	func testShouldInsertValue() async {
+	func testShouldInsertValue() throws {
 		//Given
 		let url: URL = url(from: #function)
 		let prefs = Prefs(url: url, writeStrategy: .immediate)
@@ -41,11 +41,11 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.dict[PrefKey.name.value], EXPECTED_VALUE)
-		let content = await syncRead(prefs)
-		XCTAssertEqual(content?[PrefKey.name.value], EXPECTED_VALUE)
+		let content = try readContent(of: prefs)
+		XCTAssertEqual(content[PrefKey.name.value], EXPECTED_VALUE)
 	}
 	
-	func testShouldReplaceValue() async throws {
+	func testShouldReplaceValue() throws {
 		//Given
 		let EXPECTED_VALUE = "Groot"
 		let url: URL = url(from: #function)
@@ -58,11 +58,11 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.dict[PrefKey.name.value], EXPECTED_VALUE)
-		let dict = await syncRead(prefs)
-		XCTAssertEqual(dict?[PrefKey.name.value], EXPECTED_VALUE)
+		let content = try readContent(of: prefs)
+		XCTAssertEqual(content[PrefKey.name.value], EXPECTED_VALUE)
 	}
 	
-	func testShouldRemoveValue() async throws {
+	func testShouldRemoveValue() throws {
 		//Given
 		let url: URL = url(from: #function)
 		try writeContent(at: url, content: [PrefKey.name.value: "Bubu", "Key2": "some"])
@@ -74,11 +74,11 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertNil(prefs.dict[PrefKey.name.value])
-		let dict = await syncRead(prefs)
-		XCTAssertNil(dict?[PrefKey.name.value])
+		let dict = try readContent(of: prefs)
+		XCTAssertNil(dict[PrefKey.name.value])
 	}
 	
-	func testShouldClearAllValues() async throws {
+	func testShouldClearAllValues() throws {
 		//Given
 		let url = url(from: #function)
 		try writeContent(at: url, content: ["Key": "Bubu", "Key 2": "4"])
@@ -90,7 +90,7 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.dict, [:])
-		_ = await syncRead(prefs)
+		_ = try readContent(of: prefs)
 		XCTAssertFalse(fileExists(at: url))
 	}
 	
@@ -217,7 +217,8 @@ final class PrefsTests: XCTestCase {
 	func testShouldHandleParallelWrite() async throws {
 		//Given
 		let url = url(from: #function)
-		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		let EXPECTED_BATCH_DELAY = 0.01
+		let prefs = Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
 		let EXPECTED_COTENT: PrefsContent = [
 			"key - 1": "1",
 			"key - 2": "2",
@@ -240,7 +241,8 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.dict, EXPECTED_COTENT)
-		let content = await syncRead(prefs)
+		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_COTENT)
 	}
 	
@@ -270,8 +272,8 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(prefs.int(key: .age), 10)
 		XCTAssertFalse(fileExists(at: url))
 		
-		try await Task.sleep(nanoseconds: UInt64(EXPECTED_BATCH_DELAY * 1_000_000_000))
-		let content = await syncRead(prefs)
+		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
 	
@@ -324,18 +326,20 @@ func writeContent(at url: URL, content: PrefsContent) throws {
 	try endData.write(to: url)
 }
 
-func syncRead(_ prefs: Prefs) async -> PrefsContent? {
+func delay(_ delay: Double, on queue: DispatchQueue) async {
 	return await withUnsafeContinuation { continuation in
-		prefs.queue.async {
-			let encryptor = SimpleEncryptor(type: .gcm)
-			guard let encData = try? Data(contentsOf: prefs.url),
-				  let data = try? encryptor.decrypt(data: encData) else {
-				continuation.resume(returning: nil)
-				return
-			}
-			let content = try? JSONDecoder().decode(PrefsContent.self, from: data)
-			continuation.resume(returning: content)
+		queue.asyncAfter(deadline: .now() + delay) {
+			continuation.resume()
 		}
+	}
+}
+
+func readContent(of prefs: Prefs) throws -> PrefsContent {
+	let encryptor = SimpleEncryptor(type: .gcm)
+	return try prefs.queue.sync {
+		let encData = try Data(contentsOf: prefs.url)
+		let data = try encryptor.decrypt(data: encData)
+		return try JSONDecoder().decode(PrefsContent.self, from: data)
 	}
 }
 

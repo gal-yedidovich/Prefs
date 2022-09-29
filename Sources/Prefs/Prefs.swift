@@ -26,10 +26,14 @@ public class Prefs {
 
 	private let changeSubject = PassthroughSubject<Prefs, Never>()
 	
+	public convenience init(url: URL) {
+		self.init(url: url, writeStrategy: .batch)
+	}
+	
 	/// Initialize new Prefs instance link to a given url, and loading its content
 	/// - Parameter url: filepath in filesystem
 	/// - Parameter writeStrategy: Strategy for writing to the filesystem
-	public init(url: URL, writeStrategy: WriteStrategyType = .batch) {
+	internal init(url: URL, writeStrategy: WriteStrategyType = .batch) {
 		self.url = url
 		self.strategy = writeStrategy.createStrategy()
 		self.repository = EncryptedFileRepository(url: url)
