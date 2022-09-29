@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "cryptoextensions",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gal-yedidovich/CryptoExtensions",
+      "state" : {
+        "revision" : "91369342eeef2b07d6734baeb735d9aaae9903f5",
+        "version" : "1.1.4"
+      }
+    }
+  ],
+  "version" : 2
+}
