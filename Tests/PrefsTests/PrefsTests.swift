@@ -92,16 +92,127 @@ final class PrefsTests: XCTestCase {
 		XCTAssertFalse(fileExists(at: url))
 	}
 	
+	func testShouldReadInt() throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_NUMBER = 4
+		try writeContent(at: url, content: [PrefKey.age.value: "\(EXPECTED_NUMBER)"])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let num = prefs.int(key: .age)
+		
+		//Then
+		XCTAssertEqual(num, EXPECTED_NUMBER)
+	}
+	
+	func testShouldReadString() throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_STRING = "Deadpool"
+		try writeContent(at: url, content: [PrefKey.name.value: EXPECTED_STRING])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let str = prefs.string(key: .name)
+		
+		//Then
+		XCTAssertEqual(str, EXPECTED_STRING)
+	}
+	
+	func testShouldReadBool() throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_BOOL = true
+		try writeContent(at: url, content: [PrefKey.isAlive.value: "\(EXPECTED_BOOL)"])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let bool = prefs.bool(key: .isAlive)
+		
+		//Then
+		XCTAssertEqual(bool, EXPECTED_BOOL)
+	}
+	
+	func testShouldReadBoolFallback() throws {
+		//Given
+		let url = url(from: #function)
+		try writeContent(at: url, content: [:])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let bool = prefs.bool(key: .isAlive)
+		
+		//Then
+		XCTAssertFalse(bool)
+	}
+	
+	func testShouldReadCodable() throws {
+		//Given
+		struct Payload: Codable, Equatable { var field: String }
+		let EXPECTED_PAYLOAD: Payload = Payload(field: "Some Value")
+		let payloadString = try String(decoding: JSONEncoder().encode(EXPECTED_PAYLOAD), as: UTF8.self)
+		let url = url(from: #function)
+		try writeContent(at: url, content: [PrefKey.payload.value: payloadString])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let payload = prefs.codable(key: .payload, as: Payload.self)
+		
+		//Then
+		XCTAssertEqual(payload, EXPECTED_PAYLOAD)
+	}
+	
+	func testShouldReturnNil_whenValueMissing() {
+		//Given
+		let url = url(from: #function)
+		let prefs = Prefs(url: url)
+		
+		//When
+		let string = prefs.string(key: .age)
+		let num = prefs.int(key: .age)
+		let bool = prefs.bool(key: .age)
+		let codable = prefs.codable(key: .age, as: [String].self)
+		
+		//Then
+		XCTAssertNil(string)
+		XCTAssertNil(num)
+		XCTAssertFalse(bool)
+		XCTAssertNil(codable)
+	}
+	
+	func testShouldReturnTrue_whenContainsValue() throws {
+		//Given
+		let url = url(from: #function)
+		try writeContent(at: url, content: [PrefKey.name.value: "Bubu"])
+		let prefs = Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let valueExists = prefs.contains(.name)
+		
+		//Then
+		XCTAssertTrue(valueExists)
+	}
+	
+	func testShouldReturnFalse_whenNotContainingValue() throws {
+		//Given
+		let url = url(from: #function)
+		let prefs = Prefs(url: url)
+		
+		//When
+		let valueExists = prefs.contains(.name)
+		
+		//Then
+		XCTAssertFalse(valueExists)
+	}
+	
 	/*
-	 TODO: add read tests
-	 testShouldReadInt
-	 testShouldReadString
-	 testShouldReadBool
-	 testShouldReadCodable
-	 testShouldReturnNil_whenValueMissing
-	 testShouldReturnTrue_whenContainsValue
-	 testShouldReturnFalse_whenNotContainingValue
-	 
 	 TODO: add other tests
 	 testShouldHandleParallelWrite
 	 testShuoldBatchCommits
@@ -176,6 +287,6 @@ fileprivate extension PrefKey {
 	static let name = PrefKey(value: "name")
 	static let age = PrefKey(value: "age")
 	static let isAlive = PrefKey(value: "isAlive")
-	static let numbers = PrefKey(value: "numbers")
+	static let payload = PrefKey(value: "payload")
 }
 
