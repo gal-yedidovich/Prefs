@@ -38,6 +38,8 @@ public class Prefs {
 	}
 	
 	private func tryLoadContent() {
+		guard FileManager.default.fileExists(atPath: url.path) else { return }
+		
 		do {
 			try reload()
 		} catch {

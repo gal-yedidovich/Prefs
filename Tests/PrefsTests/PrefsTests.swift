@@ -66,6 +66,7 @@ final class PrefsTests: XCTestCase {
 		let url: URL = url(from: #function)
 		try writeContent(at: url, content: [PrefKey.name.value: "Bubu", "Key2": "some"])
 		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		defer { remove(file: url) }
 		
 		//When
 		prefs.edit().remove(key: .name).commit()
@@ -212,42 +213,108 @@ final class PrefsTests: XCTestCase {
 		XCTAssertFalse(valueExists)
 	}
 	
-	/*
-	 TODO: add other tests
-	 testShouldHandleParallelWrite
-	 testShuoldBatchCommits
-	 testShuoldObserveChanges
-	 testShouldCancelBatchWrite_whenDeinitBeforeTimeout
-	 */
-}
-
-private extension PrefsTests {
-	func teardown(_ prefs: Prefs...) throws {
-		for p in prefs {
-			try p.queue.sync {
-				try FileManager.default.removeItem(at: p.url)
+	func testShouldHandleParallelWrite() async throws {
+		//Given
+		let url = url(from: #function)
+		let prefs = Prefs(url: url, writeStrategy: .immediate)
+		let EXPECTED_COTENT: PrefsContent = [
+			"key - 1": "1",
+			"key - 2": "2",
+			"key - 3": "3",
+			"key - 4": "4",
+			"key - 5": "5",
+		]
+		defer { remove(file: url) }
+		
+		//When
+		await withTaskGroup(of: Void.self, body: { group in
+			for i in 1...5 {
+				group.addTask {
+					prefs.edit()
+						.put(key: PrefKey(value: "key - \(i)"), i)
+						.commit()
+				}
 			}
-		}
+		})
+		
+		//Then
+		XCTAssertEqual(prefs.dict, EXPECTED_COTENT)
+		let content = await syncRead(prefs)
+		XCTAssertEqual(content, EXPECTED_COTENT)
 	}
 	
-	func afterWrite(at prefs: Prefs, test: @escaping TestHandler) {
-		let expectation = XCTestExpectation(description: "wait to write to Prefs")
+	func testShouldBatchCommits() async throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_BATCH_DELAY = 0.01
+		let EXPECTED_CONTENT: PrefsContent = [
+			PrefKey.name.value: "Bubu",
+			PrefKey.age.value: "10"
+		]
+		let prefs = Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
+		defer { remove(file: url) }
 		
-		prefs.queue.async { //after written to storage
-//			self.check(prefs, expectation, test: test) // TODO: read file
-		}
+		//When
+		prefs.edit()
+			.put(key: .name, "Bubu")
+			.commit()
 		
-		wait(for: [expectation], timeout: 10)
+		prefs.edit()
+			.put(key: .age, 10)
+			.commit()
+		
+		
+		//Then
+		XCTAssertEqual(prefs.string(key: .name), "Bubu")
+		XCTAssertEqual(prefs.int(key: .age), 10)
+		XCTAssertFalse(fileExists(at: url))
+		
+		try await Task.sleep(nanoseconds: UInt64(EXPECTED_BATCH_DELAY * 1_000_000_000))
+		let content = await syncRead(prefs)
+		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
 	
-//	func check(_ prefs: Prefs, _ expectation: XCTestExpectation, test: @escaping TestHandler) {
-//		do {
-//			test(try Filer.load(json: prefs.filename))
-//		} catch {
-//			XCTFail(error.localizedDescription)
-//		}
-//		expectation.fulfill()
-//	}
+	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_BATCH_DELAY = 0.01
+		var prefs: Prefs? = Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
+		let queue = prefs!.queue
+		defer { remove(file: url) }
+		
+		//When
+		prefs?.edit()
+			.put(key: .name, "To be cancelled")
+			.commit()
+		prefs = nil
+		
+		//Then
+		let e = XCTestExpectation(description: "waiting for batch timeout")
+		queue.asyncAfter(deadline: .now() + EXPECTED_BATCH_DELAY) {
+			XCTAssertFalse(fileExists(at: url))
+			e.fulfill()
+		}
+		wait(for: [e], timeout: 10)
+	}
+	
+	func testShouldObserveChanges() {
+		//Given
+		let url = url(from: #function)
+		let prefs = Prefs(url: url)
+		var flags = [false, false]
+		var store = Set<AnyCancellable>()
+		prefs.publisher.sink { _ in flags[0] = true }.store(in: &store)
+		prefs.publisher.sink { _ in flags[1] = true }.store(in: &store)
+		
+		//When
+		prefs.edit()
+			.put(key: .name, "Bubu")
+			.commit();
+		
+		//Then
+		XCTAssertTrue(flags[0])
+		XCTAssertTrue(flags[1])
+	}
 }
 
 func writeContent(at url: URL, content: PrefsContent) throws {
