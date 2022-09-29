@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SimpleEncryptor
 
 protocol Repository {
 	func read() throws -> PrefsContent
@@ -13,32 +14,20 @@ protocol Repository {
 	func write(_ content: PrefsContent) throws
 }
 
-struct ClearFileRepository: Repository {
+struct EncryptedFileRepository: Repository {
 	let url: URL
+	let encryptor = SimpleEncryptor(type: .gcm)
 	
 	func read() throws -> PrefsContent {
-		let data = try Data(contentsOf: url)
+		let encData = try Data(contentsOf: url)
+		let data = try encryptor.decrypt(data: encData)
 		let dict = try JSONDecoder().decode(PrefsContent.self, from: data)
 		return dict
 	}
 	
 	func write(_ content: PrefsContent) throws {
 		let data = try JSONEncoder().encode(content)
-		try data.write(to: url)
+		let encData = try encryptor.encrypt(data: data)
+		try encData.write(to: url, options: [.atomic])
 	}
 }
-
-//struct EncryptedRepository: FileRepository {
-//	let url: URL
-//
-//	func read() throws -> [String: String] {
-//		let data = try Data(contentsOf: url)
-//		let dict = try JSONDecoder().decode([String: String].self, from: data)
-//		return dict
-//	}
-//
-//	func write(_ content: [String: String]) throws {
-//		let data = try JSONEncoder().encode(content)
-//		try data.write(to: url)
-//	}
-//}

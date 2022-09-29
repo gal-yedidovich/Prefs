@@ -1,5 +1,6 @@
 import XCTest
 import Combine
+import SimpleEncryptor
 @testable import Prefs
 
 final class PrefsTests: XCTestCase {
@@ -319,13 +320,16 @@ final class PrefsTests: XCTestCase {
 
 func writeContent(at url: URL, content: PrefsContent) throws {
 	let json = try JSONEncoder().encode(content)
-	try json.write(to: url)
+	let endData = try SimpleEncryptor(type: .gcm).encrypt(data: json)
+	try endData.write(to: url)
 }
 
 func syncRead(_ prefs: Prefs) async -> PrefsContent? {
 	return await withUnsafeContinuation { continuation in
 		prefs.queue.async {
-			guard let data = try? Data(contentsOf: prefs.url) else {
+			let encryptor = SimpleEncryptor(type: .gcm)
+			guard let encData = try? Data(contentsOf: prefs.url),
+				  let data = try? encryptor.decrypt(data: encData) else {
 				continuation.resume(returning: nil)
 				return
 			}

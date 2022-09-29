@@ -32,7 +32,7 @@ public class Prefs {
 	public init(url: URL, writeStrategy: WriteStrategyType = .batch) {
 		self.url = url
 		self.strategy = writeStrategy.createStrategy()
-		self.repository = ClearFileRepository(url: url)
+		self.repository = EncryptedFileRepository(url: url)
 		
 		tryLoadContent()
 	}

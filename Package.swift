@@ -22,7 +22,7 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "Prefs",
-            dependencies: []),
+			dependencies: [.product(name: "SimpleEncryptor", package: "CryptoExtensions")]),
         .testTarget(
             name: "PrefsTests",
             dependencies: ["Prefs"]),
