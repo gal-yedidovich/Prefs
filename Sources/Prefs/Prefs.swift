@@ -10,30 +10,53 @@ import os
 
 typealias PrefsContent = [String: String]
 
-public class Prefs {
-	public static let standard = {
-		let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-		let url = dir.appendingPathComponent("_")
-		return Prefs(url: url)
-	}()
+let logger = Logger()
 
-	internal var logger: Logger { Logger(subsystem: "gal.SwiftExtensions", category: "Prefs") }
+enum PrefsError: LocalizedError {
+	case invalidUrl
+	
+	var errorDescription: String? {
+		switch self {
+		case .invalidUrl:
+			return "invalid url, must be a local file url"
+		}
+	}
+}
+
+public class Prefs {
+	public static let standard = Prefs(suite: "_")
+
 	internal let queue = DispatchQueue(label: "prefs", qos: .background)
-	internal var dict: PrefsContent = [:]
 	internal let url: URL
 	internal let strategy: WriteStrategy
 	internal let repository: Repository
+	internal var dict: PrefsContent = [:]
 
 	private let changeSubject = PassthroughSubject<Prefs, Never>()
 	
-	public convenience init(url: URL) {
-		self.init(url: url, writeStrategy: .batch)
+	
+	/// Initialize new Prefs instance with a suite name, and loading its content
+	/// - Parameter suite: name of the prefs suite in the filesystem
+	public convenience init(suite: String) {
+		let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+		let url = dir.appendingPathComponent(suite)
+		try! self.init(url: url)
 	}
 	
 	/// Initialize new Prefs instance link to a given url, and loading its content
 	/// - Parameter url: filepath in filesystem
+	public convenience init(url: URL) throws {
+		try self.init(url: url, writeStrategy: .batch)
+	}
+	
+	/// Initialize new Prefs instance link to a given url and a writing strartegy, and loading its content
+	/// - Parameter url: filepath in filesystem,
 	/// - Parameter writeStrategy: Strategy for writing to the filesystem
-	internal init(url: URL, writeStrategy: WriteStrategyType = .batch) {
+	internal init(url: URL, writeStrategy: WriteStrategyType = .batch) throws {
+		guard url.isFileURL else {
+			throw PrefsError.invalidUrl
+		}
+		
 		self.url = url
 		self.strategy = writeStrategy.createStrategy()
 		self.repository = EncryptedFileRepository(url: url)
