@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 @propertyWrapper
-public struct PrefsValue<Value: Codable>: DynamicProperty {
+public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
 	private let defaultValue: Value
 	private let key: Prefs.Key
 	private let prefs: Prefs
@@ -20,7 +20,8 @@ public struct PrefsValue<Value: Codable>: DynamicProperty {
 		self.prefs = prefs
 		self.defaultValue = defValue
 		let publisher = prefs.publisher
-			.map { _ in () }
+			.map { prefs in prefs.codable(key: key, as: Value.self) }
+			.removeDuplicates()
 			.eraseToAnyPublisher()
 		preferencesObserver = .init(publisher: publisher)
 	}

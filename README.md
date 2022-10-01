@@ -1,11 +1,11 @@
 # Prefs - Safe Key-Value storage. 
 
-Insapired after iOS's `UserDefaults` & Android's `SharedPreferences`, The `Prefs` class enables you to manage Key-Value pairs easily and securely using the encryption layer from `CryptoExtensions`, also comes with a caching logic for fast & non blocking read/writes operation in memory.
+Insapired after iOS's `UserDefaults` & Android's `SharedPreferences`, The `Prefs` class enables you to store Key-Value pairs easily and securely using the encryption layer from `CryptoExtensions`, also comes with a caching logic for fast & non blocking read/writes operation in memory.
 
 ## Installation
 Prefs is a *Swift Package*. 
 
-Use the swift package manager to install SwiftExtensions on your project. [Apple Developer Guide](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)
+Use the swift package manager to install Prefs on your project. [Apple Developer Guide](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)
 
 ##Usage
 You can either use the `standard` instance, which is also using an obfuscated filename, or create your own instances for multiple files, like so:
@@ -20,14 +20,13 @@ let myPrefs = Prefs(suite: "My prefs suite") //new instance with a suite name
 Writing values: 
 ```swift	
 extension Prefs.Key {
-	static let name = Prefs.Key(value: "obfuscatedKey") //value should be obfuscated
+	static let name = Prefs.Key(value: "obfuscated_key") //value should be obfuscated
 }
 
 let myPrefs.edit() //start editing
 	.put(key: .name, "Bubu") //using the static constant '.name'
 	.commit() //save your changes in memory & lcoal storage
 ```
-
 
 Reading value:
 ```swift
@@ -56,9 +55,7 @@ A simple property wrapper for easy `Prefs` manipulation. Also, it allows to upda
 
 ```swift
 let prefKey = Prefs.Key(value: "score_key")
-
 @PrefsValue(prefKey) var score = 0 //reads value from prefs or uses default value instead
-
 score = 100 // commits an update to the prefs on assignments
 ```
 
@@ -73,8 +70,12 @@ Example in a SwiftUI view
 ```swift
 import SwiftUI
 
+extension Prefs.Key {
+	static let countKey = Prefs.Key(value: "count_key")
+}
+
 struct MyView: View {
-	@PrefValue private var count = 0
+	@PrefValue(.countKey) private var count = 0
 	
 	body: some View {
 		VStack {
