@@ -13,17 +13,16 @@ public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
 	private let defaultValue: Value
 	private let key: Prefs.Key
 	private let prefs: Prefs
-	@ObservedObject private var preferencesObserver: PublisherObservableObject
+	@StateObject private var prefsObserver: PublisherObservableObject
 	
-	public init(wrappedValue defValue: Value, _ key: Prefs.Key, prefs: Prefs = .standard) {
+	nonisolated public init(wrappedValue defValue: Value, _ key: Prefs.Key, prefs: Prefs = .standard) {
 		self.key = key
 		self.prefs = prefs
 		self.defaultValue = defValue
 		let publisher = prefs.publisher
 			.map { prefs in prefs.codable(key: key, as: Value.self) }
 			.removeDuplicates()
-			.eraseToAnyPublisher()
-		preferencesObserver = .init(publisher: publisher)
+		_prefsObserver = StateObject(wrappedValue: PublisherObservableObject(publisher: publisher))
 	}
 	
 	public var wrappedValue: Value {
