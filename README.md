@@ -14,13 +14,13 @@ You can either use the `standard` instance, which is also using an obfuscated fi
 let standardPrefs = Prefs.standard //the built-in standard instance 
 
 //OR
-let myPrefs = Prefs(file: .myFile1) //new instance using the Filename struct
+let myPrefs = Prefs(suite: "My prefs suite") //new instance with a suite name
 ```
 
 Writing values: 
 ```swift	
-extension PrefKey {
-	static let name = PrefKey(value: "obfuscatedKey") //value should be obfuscated
+extension Prefs.Key {
+	static let name = Prefs.Key(value: "obfuscatedKey") //value should be obfuscated
 }
 
 let myPrefs.edit() //start editing
@@ -50,3 +50,40 @@ let cancelable2 = prefs.publisher
 ```
 
 > `Prefs.publisher` will fire events when the prefs instance has committed non-empty commits.
+
+##PrefsValue
+A simple property wrapper for easy `Prefs` manipulation. Also, it allows to update SwiftUI views when wrapped value changes (both from view or directly the prefs)
+
+```swift
+let prefKey = Prefs.Key(value: "score_key")
+
+@PrefsValue(prefKey) var score = 0 //reads value from prefs or uses default value instead
+
+score = 100 // commits an update to the prefs on assignments
+```
+
+By default `@PrefsValue` connects to the `Prefs.standard` instance, but it can connect to any instance explictly
+
+```swift
+let myPrefs = Prefs(suite: "some suite")
+@PrefsValue(prefKey, prefs: myPrefs) var score = 0
+```
+
+Example in a SwiftUI view
+```swift
+import SwiftUI
+
+struct MyView: View {
+	@PrefValue private var count = 0
+	
+	body: some View {
+		VStack {
+			Text("Count: \(count)")
+			
+			Button("increment pref value") {
+				count += 1
+			}
+		}
+	}
+}
+```

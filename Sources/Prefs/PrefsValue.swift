@@ -11,11 +11,11 @@ import Combine
 @propertyWrapper
 public struct PrefsValue<Value: Codable>: DynamicProperty {
 	private let defaultValue: Value
-	private let key: PrefKey
+	private let key: Prefs.Key
 	private let prefs: Prefs
 	@ObservedObject private var preferencesObserver: PublisherObservableObject
 	
-	public init(wrappedValue defValue: Value, _ key: PrefKey, prefs: Prefs = .standard) {
+	public init(wrappedValue defValue: Value, _ key: Prefs.Key, prefs: Prefs = .standard) {
 		self.key = key
 		self.prefs = prefs
 		self.defaultValue = defValue

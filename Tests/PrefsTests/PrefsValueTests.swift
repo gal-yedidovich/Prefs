@@ -62,9 +62,9 @@ final class PrefsValueTests: XCTestCase {
 	}
 }
 
-fileprivate extension PrefKey {
-	static let firstName = PrefKey(value: "firstName")
-	static let lastName = PrefKey(value: "lastName")
-	static let isAlive = PrefKey(value: "isAlive")
-	static let age = PrefKey(value: "age")
+fileprivate extension Prefs.Key {
+	static let firstName = Prefs.Key(value: "firstName")
+	static let lastName =  Prefs.Key(value: "lastName")
+	static let isAlive = Prefs.Key(value: "isAlive")
+	static let age = Prefs.Key(value: "age")
 }

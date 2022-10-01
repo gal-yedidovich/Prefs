@@ -83,30 +83,30 @@ public class Prefs {
 	/// Get a string value from `Prefs` by given key, or nil if its not found
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Returns: String value of the given key, or nil if its not found
-	public func string(key: PrefKey) -> String? { dict[key.value] }
+	public func string(key: Key) -> String? { dict[key.value] }
 	
 	/// Get an int value from `Prefs` by given key, or nil if not found
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Returns: Int value of the given key, or nil if its not found
-	public func int(key: PrefKey) -> Int? { codable(key: key) }
+	public func int(key: Key) -> Int? { codable(key: key) }
 	
 	/// Gets a boolean value from `Prefs` by given key, or uses the fallback value if not found
 	/// - Parameters:
 	///   - key: The wanted key, linked to the wanted value
 	///   - fallback: The default value in case the key is not found
 	/// - Returns: Bool value of the given key, or the fallback if its not found.
-	public func bool(key: PrefKey, fallback: Bool = false) -> Bool { codable(key: key) ?? fallback }
+	public func bool(key: Key, fallback: Bool = false) -> Bool { codable(key: key) ?? fallback }
 	
 	/// Get a date value from `Prefs` by given key, or nil if not found
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Returns: Date value of the given key, or nil if not found
-	public func date(key: PrefKey) -> Date? { codable(key: key) }
+	public func date(key: Key) -> Date? { codable(key: key) }
 	
 	/// Get a Decodable value from `Prefs` by given key, or nil if not found
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Parameter type: The resulting `Decodable` type. Defaults to the inferred type from the caller.
 	/// - Returns: Some Decodable, or nil if key is not found
-	public func codable<Content: Decodable>(key: PrefKey, as type: Content.Type = Content.self) -> Content? {
+	public func codable<Content: Decodable>(key: Key, as type: Content.Type = Content.self) -> Content? {
 		guard let str = dict[key.value] else { return nil }
 		if Content.self == String.self { return str as? Content }
 		
@@ -117,7 +117,7 @@ public class Prefs {
 	/// check if values exist for given keys.
 	/// - Parameter keys: pref keys to check
 	/// - Returns: true if all of the keys exist, otherwise false
-	public func contains(_ keys: PrefKey...) -> Bool {
+	public func contains(_ keys: Key...) -> Bool {
 		keys.allSatisfy { dict[$0.value] != nil }
 	}
 	
