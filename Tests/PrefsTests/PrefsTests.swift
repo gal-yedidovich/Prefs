@@ -92,6 +92,19 @@ final class PrefsTests: XCTestCase {
 		XCTAssertFalse(fileExists(at: url))
 	}
 	
+	func testShouldDeleteFileRemovingLastValue() throws {
+		//Given
+		let url: URL = url(from: #function)
+		try writeContent(at: url, content: [Prefs.Key.name.value: "Last"])
+		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		
+		//When
+		prefs.edit().remove(key: .name).commit()
+		
+		//Then
+		XCTAssertFalse(fileExists(at: url))
+	}
+	
 	func testShouldReadInt() throws {
 		//Given
 		let url = url(from: #function)
