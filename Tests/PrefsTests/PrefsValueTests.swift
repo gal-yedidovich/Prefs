@@ -10,9 +10,24 @@ import XCTest
 import Prefs
 
 final class PrefsValueTests: XCTestCase {
+	lazy var prefs: Prefs = Prefs(suite: name)
+	
+	override func tearDown() {
+		prefs.edit().clear().commit()
+	}
+	
+	func testShouldBeNil_whenKeyIsMissing() {
+		//Given
+		
+		//When
+		@PrefsValue(.firstName, prefs: prefs) var name: String?
+		
+		//Then
+		XCTAssertNil(name)
+	}
+
 	func testShouldBeDefaultValue_whenKeyIsMissing() {
 		//Given
-		let prefs = Prefs(suite: #function)
 		let EXPECTED_DEFAULT_VALUE = "default value"
 		
 		//When
@@ -24,10 +39,8 @@ final class PrefsValueTests: XCTestCase {
 	
 	func testShouldUsePrefsValue() {
 		//Given
-		let prefs = Prefs(suite: #function)
 		let EXPECTED_VALUE = "bubu"
 		prefs.edit().put(key: .lastName, EXPECTED_VALUE).commit()
-		defer { prefs.edit().clear().commit() }
 		
 		//When
 		@PrefsValue(.lastName, prefs: prefs) var name = "default value"
@@ -38,7 +51,6 @@ final class PrefsValueTests: XCTestCase {
 	
 	func testShouldUpdatePrefs_whenAssigningNewValue() {
 		//Given
-		let prefs = Prefs(suite: #function)
 		@PrefsValue(.age, prefs: prefs) var age = 10
 		
 		//When
@@ -48,11 +60,21 @@ final class PrefsValueTests: XCTestCase {
 		XCTAssertEqual(prefs.int(key: .age), age)
 	}
 	
+	func testShouldRemoveFromPrefs_whenAssigningNil() {
+		//Given
+		@PrefsValue(.age, prefs: prefs) var age: Int?
+		age = 9
+		
+		//When
+		age = nil
+		
+		//Then
+		XCTAssertFalse(prefs.contains(.age))
+	}
+	
 	func testShouldUpdatePrefsValue_whenEditingPrefs() {
 		//Given
-		let prefs = Prefs(suite: #function)
 		@PrefsValue(.isAlive, prefs: prefs) var isAlive = false
-		defer { prefs.edit().clear().commit() }
 		
 		//When
 		prefs.edit().put(key: .isAlive, true).commit()

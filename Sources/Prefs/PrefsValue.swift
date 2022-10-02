@@ -27,7 +27,13 @@ public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
 	
 	public var wrappedValue: Value {
 		get { prefs.codable(key: key) ?? defaultValue }
-		nonmutating set { prefs.edit().put(key: key, newValue).commit() }
+		nonmutating set {
+			if let optional = newValue as? AnyOptional, optional.isNil {
+				prefs.edit().remove(key: key).commit()
+			} else {
+				prefs.edit().put(key: key, newValue).commit()
+			}
+		}
 	}
 	
 	public var projectedValue: Binding<Value> {
@@ -38,11 +44,27 @@ public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
 	}
 }
 
+//MARK: - Nil values
+public extension PrefsValue where Value: ExpressibleByNilLiteral {
+	init(_ key: Prefs.Key, prefs: Prefs = .standard) {
+		self.init(wrappedValue: nil, key, prefs: prefs)
+	}
+}
+
+private protocol AnyOptional {
+	var isNil: Bool { get }
+}
+
+extension Optional: AnyOptional {
+	var isNil: Bool { self == nil }
+}
+
+//MARK: - Publshing UI updates
 private final class PublisherObservableObject: ObservableObject {
 	var subscriber: (any Cancellable)?
 	
-	init(publisher: some Publisher) {
-		subscriber = publisher.sink { _ in } receiveValue: { [weak self] _ in
+	init<Pub: Publisher>(publisher: Pub) where Pub.Failure == Never {
+		subscriber = publisher.sink { [weak self] _ in
 			self?.objectWillChange.send()
 		}
 	}
