@@ -120,6 +120,21 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(num, EXPECTED_NUMBER)
 	}
 	
+	func testShouldReadDouble() throws {
+		//Given
+		let url = url(from: #function)
+		let EXPECTED_NUMBER = 36.6
+		try writeContent(at: url, content: [Prefs.Key.temperature.value: "\(EXPECTED_NUMBER)"])
+		let prefs = try Prefs(url: url)
+		defer { remove(file: url) }
+		
+		//When
+		let temp = prefs.double(key: .temperature)
+		
+		//Then
+		XCTAssertEqual(temp, EXPECTED_NUMBER)
+	}
+	
 	func testShouldReadString() throws {
 		//Given
 		let url = url(from: #function)
@@ -394,7 +409,7 @@ fileprivate typealias TestHandler = ([String:String]) -> Void
 fileprivate extension Prefs.Key {
 	static let name = Prefs.Key(value: "name")
 	static let age = Prefs.Key(value: "age")
+	static let temperature = Prefs.Key(value: "temperature")
 	static let isAlive = Prefs.Key(value: "isAlive")
 	static let payload = Prefs.Key(value: "payload")
 }
-

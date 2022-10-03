@@ -34,7 +34,6 @@ public class Prefs {
 
 	private let changeSubject = PassthroughSubject<Prefs, Never>()
 	
-	
 	/// Initialize new Prefs instance with a suite name, and loading its content
 	/// - Parameter suite: name of the prefs suite in the filesystem
 	public convenience init(suite: String) {
@@ -89,6 +88,11 @@ public class Prefs {
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Returns: Int value of the given key, or nil if its not found
 	public func int(key: Key) -> Int? { codable(key: key) }
+	
+	/// Get a double value from `Prefs` by given key, or nil if not found
+	/// - Parameter key: The wanted key, linked to the wanted value
+	/// - Returns: Int value of the given key, or nil if its not found
+	public func double(key: Key) -> Double? { codable(key: key) }
 	
 	/// Gets a boolean value from `Prefs` by given key, or uses the fallback value if not found
 	/// - Parameters:
