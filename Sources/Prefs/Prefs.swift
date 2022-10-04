@@ -70,7 +70,6 @@ public class Prefs<Content: Codable & Equatable> {
 	
 	private func writeContent() {
 		do {
-			print("writing")
 			try repository.write(content)
 		}
 		catch {
