@@ -18,7 +18,7 @@ public struct PrefsValue<Content: Codable & Equatable, Value: Codable & Equatabl
 		self.prefs = prefs
 		self.key = key
 		let publisher = prefs.publisher
-			.map { prefs in prefs[key] }
+			.map { $0[keyPath: key] }
 			.removeDuplicates()
 		_prefsObserver = StateObject(wrappedValue: PublisherObservableObject(publisher: publisher))
 	}

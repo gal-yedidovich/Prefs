@@ -84,21 +84,20 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
 	
-//	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
-//		//Given
-//		let url = url(from: #function)
-//		var prefs: Prefs? = try Prefs(url: url, content: TestContent())
-//		let queue = prefs!.queue
-////		defer { remove(file: url) }
-//
-//		//When
-//		prefs?[\.name] = "New Value"
-//		prefs = nil
-//
-//		//Then
-//		await delay(0.5, on: queue)
-//		XCTAssertFalse(fileExists(at: url))
-//	}
+	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
+		//Given
+		let url = url(from: #function)
+		var prefs: Prefs? = try Prefs(url: url, content: TestContent())
+		let queue = prefs!.queue
+
+		//When
+		prefs?[\.name] = "New Value"
+		prefs = nil
+
+		//Then
+		await delay(0.1, on: queue)
+		XCTAssertFalse(fileExists(at: url))
+	}
 	
 	func testShouldObserveChanges() async throws {
 		//Given

@@ -30,7 +30,7 @@ public class Prefs<Content: Codable & Equatable> {
 	internal var content: Content
 
 	private var subscription = Set<AnyCancellable>()
-	private let changeSubject = PassthroughSubject<Prefs, Never>()
+	private let changeSubject = PassthroughSubject<Content, Never>()
 	
 	/// Initialize new Prefs instance with a suite name, and loading its content
 	/// - Parameter suite: name of the prefs suite in the filesystem
@@ -54,7 +54,7 @@ public class Prefs<Content: Codable & Equatable> {
 		
 		tryLoadContent()
 		publisher
-			.sink { prefs in prefs.writeContent() }
+			.sink { [weak self] _ in self?.writeContent() }
 			.store(in: &subscription)
 	}
 	
@@ -91,12 +91,12 @@ public class Prefs<Content: Codable & Equatable> {
 		get { content[keyPath: keyPath] }
 		set {
 			content[keyPath: keyPath] = newValue
-			changeSubject.send(self)
+			changeSubject.send(content)
 		}
 	}
 	
 	/// A Combine publisher that publishes whenever the prefs commit changes.
-	public var publisher: AnyPublisher<Prefs, Never> {
+	public var publisher: AnyPublisher<Content, Never> {
 		changeSubject
 			.debounce(for: 0.1, scheduler: queue)
 			.eraseToAnyPublisher()
