@@ -7,7 +7,7 @@ Prefs is a *Swift Package*.
 
 Use the swift package manager to install Prefs on your project. [Apple Developer Guide](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)
 
-##Usage
+## Usage
 You can either use the `standard` instance, which is also using an obfuscated filename, or create your own instances for multiple files, like so:
 
 ```swift
@@ -17,8 +17,9 @@ let standardPrefs = Prefs.standard //the built-in standard instance
 let myPrefs = Prefs(suite: "My prefs suite") //new instance with a suite name
 ```
 
-Writing values: 
-```swift	
+Writing & reading values: 
+```swift
+//Defining a key
 extension Prefs.Key {
 	static let name = Prefs.Key(value: "obfuscated_key") //value should be obfuscated
 }
@@ -26,10 +27,7 @@ extension Prefs.Key {
 let myPrefs.edit() //start editing
 	.put(key: .name, "Bubu") //using the static constant '.name'
 	.commit() //save your changes in memory & lcoal storage
-```
 
-Reading value:
-```swift
 if let name = myPrefs.string(key: .name) {
 	print("\(name), is the king")
 }
@@ -48,9 +46,9 @@ let cancelable2 = prefs.publisher
 	.sink { print("name changed to: \($0)") }
 ```
 
-> `Prefs.publisher` will fire events when the prefs instance has committed non-empty commits.
+> `Prefs.publisher` will fire events only when the prefs instance has committed non-empty commits.
 
-##PrefsValue
+## @PrefsValue property wrapper
 A simple property wrapper for easy `Prefs` manipulation. Also, it allows to update SwiftUI views when wrapped value changes (both from view or directly the prefs)
 
 ```swift
