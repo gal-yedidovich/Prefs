@@ -10,83 +10,48 @@ import XCTest
 import Prefs
 
 final class PrefsValueTests: XCTestCase {
-	lazy var prefs: Prefs = Prefs(suite: name)
+	lazy var prefs = Prefs(suite: name, content: TestContent())
 	
 	override func tearDown() {
-		prefs.edit().clear().commit()
-	}
-	
-	func testShouldBeNil_whenKeyIsMissing() {
-		//Given
-		
-		//When
-		@PrefsValue(.firstName, prefs: prefs) var name: String?
-		
-		//Then
-		XCTAssertNil(name)
+		try? prefs.clear()
 	}
 
-	func testShouldBeDefaultValue_whenKeyIsMissing() {
+	func testShouldBeInitialValue() {
 		//Given
-		let EXPECTED_DEFAULT_VALUE = "default value"
 		
 		//When
-		@PrefsValue(.firstName, prefs: prefs) var name = EXPECTED_DEFAULT_VALUE
+		@PrefsValue(prefs, \.firstName) var name: String
 		
 		//Then
-		XCTAssertEqual(name, EXPECTED_DEFAULT_VALUE)
-	}
-	
-	func testShouldUsePrefsValue() {
-		//Given
-		let EXPECTED_VALUE = "bubu"
-		prefs.edit().put(key: .lastName, EXPECTED_VALUE).commit()
-		
-		//When
-		@PrefsValue(.lastName, prefs: prefs) var name = "default value"
-		
-		//Then
-		XCTAssertEqual(name, EXPECTED_VALUE)
+		XCTAssertEqual(name, "")
 	}
 	
 	func testShouldUpdatePrefs_whenAssigningNewValue() {
 		//Given
-		@PrefsValue(.age, prefs: prefs) var age = 10
+		@PrefsValue(prefs, \.age) var age: Int
 		
 		//When
 		age = 15
 		
 		//Then
-		XCTAssertEqual(prefs.int(key: .age), age)
-	}
-	
-	func testShouldRemoveFromPrefs_whenAssigningNil() {
-		//Given
-		@PrefsValue(.age, prefs: prefs) var age: Int?
-		age = 9
-		
-		//When
-		age = nil
-		
-		//Then
-		XCTAssertFalse(prefs.contains(.age))
+		XCTAssertEqual(prefs[\.age], age)
 	}
 	
 	func testShouldUpdatePrefsValue_whenEditingPrefs() {
 		//Given
-		@PrefsValue(.isAlive, prefs: prefs) var isAlive = false
+		@PrefsValue(prefs, \.isAlive) var isAlive: Bool
 		
 		//When
-		prefs.edit().put(key: .isAlive, true).commit()
+		prefs[\.isAlive] = true
 		
 		//Then
 		XCTAssertTrue(isAlive)
 	}
-}
-
-fileprivate extension Prefs.Key {
-	static let firstName = Prefs.Key(value: "firstName")
-	static let lastName =  Prefs.Key(value: "lastName")
-	static let isAlive = Prefs.Key(value: "isAlive")
-	static let age = Prefs.Key(value: "age")
+	
+	struct TestContent: Codable & Equatable {
+		var firstName: String = ""
+		var lastName: String = ""
+		var isAlive: Bool = false
+		var age: Int = 0
+	}
 }

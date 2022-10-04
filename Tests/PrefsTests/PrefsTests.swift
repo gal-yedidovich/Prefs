@@ -4,270 +4,60 @@ import SimpleEncryptor
 @testable import Prefs
 
 final class PrefsTests: XCTestCase {
-	func testShouldInitWithEmptyValues() {
-		//Given
-		
-		//When
-		let prefs = Prefs(suite: #function)
-		
-		//Then
-		XCTAssertEqual(prefs.dict, [:])
-	}
-	
 	func testShouldLoadValuesOnInit() throws {
 		//Given
 		let url: URL = url(from: #function)
-		let EXPECTED_CONTENT: [String: String] = ["Key": "Bubu"]
-		try writeContent(at: url, content: EXPECTED_CONTENT)
+		let EXPECTED_CONTENT = TestContent(name: "Bubu", age: 5, temperature: 36.6, isAlive: true)
+		try EncryptedFileRepository(url: url).write(EXPECTED_CONTENT)
 		defer { remove(file: url) }
 		
 		//When
-		let prefs = try Prefs(url: url)
+		let prefs = try Prefs(url: url, content: TestContent())
 		
 		//Then
-		XCTAssertEqual(prefs.dict, EXPECTED_CONTENT)
+		XCTAssertEqual(prefs.content, EXPECTED_CONTENT)
 	}
 	
-	func testShouldInsertValue() throws {
+	func testShouldAssignValue() async throws {
 		//Given
 		let url: URL = url(from: #function)
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, content: TestContent())
 		let EXPECTED_VALUE = "Bubu"
 		defer { remove(file: prefs.url) }
 		
 		//When
-		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
+		prefs[\.name] = EXPECTED_VALUE
 		
 		//Then
-		XCTAssertEqual(prefs.string(key: .name), EXPECTED_VALUE)
+		XCTAssertEqual(prefs.content.name, EXPECTED_VALUE)
+		await delay(0.1, on: prefs.queue)
 		let content = try readContent(of: prefs)
-		XCTAssertEqual(content[Prefs.Key.name.value], EXPECTED_VALUE)
-	}
-	
-	func testShouldReplaceValue() throws {
-		//Given
-		let EXPECTED_VALUE = "Groot"
-		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu 1"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
-		defer { remove(file: url) }
-		
-		//When
-		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
-		
-		//Then
-		XCTAssertEqual(prefs.string(key: .name), EXPECTED_VALUE)
-		let content = try readContent(of: prefs)
-		XCTAssertEqual(content[Prefs.Key.name.value], EXPECTED_VALUE)
-	}
-	
-	func testShouldRemoveValue() throws {
-		//Given
-		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu", "Key2": "some"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
-		defer { remove(file: url) }
-		
-		//When
-		prefs.edit().remove(key: .name).commit()
-		
-		//Then
-		XCTAssertNil(prefs.string(key: .name))
-		let dict = try readContent(of: prefs)
-		XCTAssertNil(dict[Prefs.Key.name.value])
-	}
-	
-	func testShouldClearAllValues() throws {
-		//Given
-		let url = url(from: #function)
-		try writeContent(at: url, content: ["Key": "Bubu", "Key 2": "4"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
-		defer { remove(file: url) }
-		
-		//When
-		prefs.edit().clear().commit()
-		
-		//Then
-		XCTAssertEqual(prefs.dict, [:])
-		XCTAssertFalse(fileExists(at: url))
-	}
-	
-	func testShouldDeleteFileRemovingLastValue() throws {
-		//Given
-		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Last"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
-		
-		//When
-		prefs.edit().remove(key: .name).commit()
-		
-		//Then
-		XCTAssertFalse(fileExists(at: url))
-	}
-	
-	func testShouldReadInt() throws {
-		//Given
-		let url = url(from: #function)
-		let EXPECTED_NUMBER = 4
-		try writeContent(at: url, content: [Prefs.Key.age.value: "\(EXPECTED_NUMBER)"])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let num = prefs.int(key: .age)
-		
-		//Then
-		XCTAssertEqual(num, EXPECTED_NUMBER)
-	}
-	
-	func testShouldReadDouble() throws {
-		//Given
-		let url = url(from: #function)
-		let EXPECTED_NUMBER = 36.6
-		try writeContent(at: url, content: [Prefs.Key.temperature.value: "\(EXPECTED_NUMBER)"])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let temp = prefs.double(key: .temperature)
-		
-		//Then
-		XCTAssertEqual(temp, EXPECTED_NUMBER)
-	}
-	
-	func testShouldReadString() throws {
-		//Given
-		let url = url(from: #function)
-		let EXPECTED_STRING = "Deadpool"
-		try writeContent(at: url, content: [Prefs.Key.name.value: EXPECTED_STRING])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let str = prefs.string(key: .name)
-		
-		//Then
-		XCTAssertEqual(str, EXPECTED_STRING)
-	}
-	
-	func testShouldReadBool() throws {
-		//Given
-		let url = url(from: #function)
-		let EXPECTED_BOOL = true
-		try writeContent(at: url, content: [Prefs.Key.isAlive.value: "\(EXPECTED_BOOL)"])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let bool = prefs.bool(key: .isAlive)
-		
-		//Then
-		XCTAssertEqual(bool, EXPECTED_BOOL)
-	}
-	
-	func testShouldReadBoolFallback() throws {
-		//Given
-		let url = url(from: #function)
-		try writeContent(at: url, content: [:])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let bool = prefs.bool(key: .isAlive)
-		
-		//Then
-		XCTAssertFalse(bool)
-	}
-	
-	func testShouldReadCodable() throws {
-		//Given
-		struct Payload: Codable, Equatable { var field: String }
-		let EXPECTED_PAYLOAD: Payload = Payload(field: "Some Value")
-		let payloadString = try String(decoding: JSONEncoder().encode(EXPECTED_PAYLOAD), as: UTF8.self)
-		let url = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.payload.value: payloadString])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let payload = prefs.codable(key: .payload, as: Payload.self)
-		
-		//Then
-		XCTAssertEqual(payload, EXPECTED_PAYLOAD)
-	}
-	
-	func testShouldReturnNil_whenValueMissing() throws {
-		//Given
-		let url = url(from: #function)
-		let prefs = try Prefs(url: url)
-		
-		//When
-		let string = prefs.string(key: .age)
-		let num = prefs.int(key: .age)
-		let bool = prefs.bool(key: .age)
-		let codable = prefs.codable(key: .age, as: [String].self)
-		
-		//Then
-		XCTAssertNil(string)
-		XCTAssertNil(num)
-		XCTAssertFalse(bool)
-		XCTAssertNil(codable)
-	}
-	
-	func testShouldReturnTrue_whenContainsValue() throws {
-		//Given
-		let url = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu"])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let valueExists = prefs.contains(.name)
-		
-		//Then
-		XCTAssertTrue(valueExists)
-	}
-	
-	func testShouldReturnFalse_whenNotContainingValue() throws {
-		//Given
-		let url = url(from: #function)
-		let prefs = try Prefs(url: url)
-		
-		//When
-		let valueExists = prefs.contains(.name)
-		
-		//Then
-		XCTAssertFalse(valueExists)
+		XCTAssertEqual(content.name, EXPECTED_VALUE)
 	}
 	
 	func testShouldHandleParallelWrite() async throws {
 		//Given
 		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
-		let prefs = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
-		let EXPECTED_COTENT: PrefsContent = [
-			"key - 1": "1",
-			"key - 2": "2",
-			"key - 3": "3",
-			"key - 4": "4",
-			"key - 5": "5",
-		]
+		let prefs = try Prefs(url: url, content: TestContent())
+		let EXPECTED_COTENT: TestContent = TestContent(
+			name: "Bubu",
+			age: 1,
+			temperature: 1.2,
+			isAlive: false
+		)
 		defer { remove(file: url) }
 		
 		//When
 		await withTaskGroup(of: Void.self, body: { group in
-			for i in 1...5 {
-				group.addTask {
-					prefs.edit()
-						.put(key: Prefs.Key(value: "key - \(i)"), i)
-						.commit()
-				}
-			}
+			group.addTask { prefs[\.name] = EXPECTED_COTENT.name }
+			group.addTask { prefs[\.age] = EXPECTED_COTENT.age }
+			group.addTask { prefs[\.temperature] = EXPECTED_COTENT.temperature }
+			group.addTask { prefs[\.isAlive] = EXPECTED_COTENT.isAlive }
 		})
 		
 		//Then
-		XCTAssertEqual(prefs.dict, EXPECTED_COTENT)
-		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		XCTAssertEqual(prefs.content, EXPECTED_COTENT)
+		await delay(0.1, on: prefs.queue)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_COTENT)
 	}
@@ -275,87 +65,57 @@ final class PrefsTests: XCTestCase {
 	func testShouldBatchCommits() async throws {
 		//Given
 		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
-		let EXPECTED_CONTENT: PrefsContent = [
-			Prefs.Key.name.value: "Bubu",
-			Prefs.Key.age.value: "10"
-		]
-		let prefs = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
+		let EXPECTED_CONTENT = TestContent(name: "asd", isAlive: true)
+		let prefs = try Prefs(url: url, content: TestContent())
 		defer { remove(file: url) }
 		
 		//When
-		prefs.edit()
-			.put(key: .name, "Bubu")
-			.commit()
-		
-		prefs.edit()
-			.put(key: .age, 10)
-			.commit()
+		prefs[\.name] = "asd"
+		prefs[\.isAlive] = true
 		
 		
 		//Then
-		XCTAssertEqual(prefs.string(key: .name), "Bubu")
-		XCTAssertEqual(prefs.int(key: .age), 10)
+		XCTAssertEqual(prefs[\.name], "asd")
+		XCTAssertEqual(prefs[\.isAlive], true)
 		XCTAssertFalse(fileExists(at: url))
 		
-		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		await delay(0.1, on: prefs.queue)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
 	
-	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
-		//Given
-		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
-		var prefs: Prefs? = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
-		let queue = prefs!.queue
-		defer { remove(file: url) }
-		
-		//When
-		prefs?.edit()
-			.put(key: .name, "To be cancelled")
-			.commit()
-		prefs = nil
-		
-		//Then
-		let e = XCTestExpectation(description: "waiting for batch timeout")
-		queue.asyncAfter(deadline: .now() + EXPECTED_BATCH_DELAY) {
-			XCTAssertFalse(fileExists(at: url))
-			e.fulfill()
-		}
-		wait(for: [e], timeout: 10)
-	}
+//	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
+//		//Given
+//		let url = url(from: #function)
+//		var prefs: Prefs? = try Prefs(url: url, content: TestContent())
+//		let queue = prefs!.queue
+////		defer { remove(file: url) }
+//
+//		//When
+//		prefs?[\.name] = "New Value"
+//		prefs = nil
+//
+//		//Then
+//		await delay(0.5, on: queue)
+//		XCTAssertFalse(fileExists(at: url))
+//	}
 	
-	func testShouldObserveChanges() throws {
+	func testShouldObserveChanges() async throws {
 		//Given
-		let prefs = Prefs(suite: #function)
+		let prefs = Prefs(suite: #function, content: TestContent())
 		var flags = [false, false]
 		var store = Set<AnyCancellable>()
 		prefs.publisher.sink { _ in flags[0] = true }.store(in: &store)
 		prefs.publisher.sink { _ in flags[1] = true }.store(in: &store)
+		defer { remove(file: prefs.url) }
 		
 		//When
-		prefs.edit()
-			.put(key: .name, "Bubu")
-			.commit();
+		prefs[\.name] = "Bubu"
 		
 		//Then
+		await delay(0.1, on: prefs.queue)
 		XCTAssertTrue(flags[0])
 		XCTAssertTrue(flags[1])
-	}
-	
-	func testShouldNotNotifyObserverOnEmptyCommit() throws {
-		//Given
-		let prefs = Prefs(suite: #function)
-		var flag = false
-		var store = Set<AnyCancellable>()
-		prefs.publisher.sink { _ in flag = true }.store(in: &store)
-		
-		//When
-		prefs.edit().commit()
-		
-		//Then
-		XCTAssertFalse(flag)
 	}
 	
 	func testShouldThrowError_whenInitWithInvalidUrl() throws {
@@ -364,7 +124,20 @@ final class PrefsTests: XCTestCase {
 		
 		//When
 		//Then
-		XCTAssertThrowsError(try Prefs(url: url))
+		XCTAssertThrowsError(try Prefs(url: url, content: TestContent()))
+	}
+	
+	
+	struct TestContent: Codable, Equatable {
+		var name: String = ""
+		var age: Int = 0
+		var temperature: Double = 0.0
+		var isAlive: Bool = false
+		var payload: TestInnerContent? = nil
+		
+		struct TestInnerContent: Codable, Equatable {
+			var value: String = ""
+		}
 	}
 }
 
@@ -382,12 +155,12 @@ func delay(_ delay: Double, on queue: DispatchQueue) async {
 	}
 }
 
-func readContent(of prefs: Prefs) throws -> PrefsContent {
+func readContent<Content: Codable & Equatable>(of prefs: Prefs<Content>) throws -> Content {
 	let encryptor = SimpleEncryptor(type: .gcm)
 	return try prefs.queue.sync {
 		let encData = try Data(contentsOf: prefs.url)
 		let data = try encryptor.decrypt(data: encData)
-		return try JSONDecoder().decode(PrefsContent.self, from: data)
+		return try JSONDecoder().decode(Content.self, from: data)
 	}
 }
 
@@ -402,14 +175,4 @@ func fileExists(at url: URL) -> Bool {
 func url(from name: String) -> URL {
 	let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
 	return dir.appendingPathComponent(name)
-}
-
-fileprivate typealias TestHandler = ([String:String]) -> Void
-
-fileprivate extension Prefs.Key {
-	static let name = Prefs.Key(value: "name")
-	static let age = Prefs.Key(value: "age")
-	static let temperature = Prefs.Key(value: "temperature")
-	static let isAlive = Prefs.Key(value: "isAlive")
-	static let payload = Prefs.Key(value: "payload")
 }
