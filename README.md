@@ -18,6 +18,7 @@ let myPrefs = Prefs(suite: "My prefs suite") //new instance with a suite name
 ```
 
 Writing & reading values: 
+> Prefs support any type that conforms to the `Codable` protocol,
 ```swift
 //Defining a key
 extension Prefs.Key {
@@ -31,7 +32,7 @@ let myPrefs.edit() //start editing
 if let name = myPrefs.string(key: .name) {
 	print("\(name), is the king")
 }
-```
+``` 
 
 Observing changes with `Combine` Framework
 ```swift
