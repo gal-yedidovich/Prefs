@@ -98,7 +98,8 @@ public class Prefs<Content: Codable & Equatable> {
 	/// A Combine publisher that publishes whenever the prefs commit changes.
 	public var publisher: AnyPublisher<Content, Never> {
 		changeSubject
-			.debounce(for: 0.1, scheduler: queue)
+			.debounce(for: 0.001, scheduler: queue)
+			.removeDuplicates()
 			.eraseToAnyPublisher()
 	}
 }

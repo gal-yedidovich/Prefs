@@ -3,6 +3,8 @@ import Combine
 import SimpleEncryptor
 @testable import Prefs
 
+let DEBOUNCE_TIMEOUT = 0.001
+
 final class PrefsTests: XCTestCase {
 	func testShouldLoadValuesOnInit() throws {
 		//Given
@@ -30,7 +32,7 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.content.name, EXPECTED_VALUE)
-		await delay(0.1, on: prefs.queue)
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content.name, EXPECTED_VALUE)
 	}
@@ -57,7 +59,7 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.content, EXPECTED_COTENT)
-		await delay(0.1, on: prefs.queue)
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_COTENT)
 	}
@@ -79,7 +81,7 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(prefs[\.isAlive], true)
 		XCTAssertFalse(fileExists(at: url))
 		
-		await delay(0.1, on: prefs.queue)
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
@@ -95,7 +97,7 @@ final class PrefsTests: XCTestCase {
 		prefs = nil
 
 		//Then
-		await delay(0.1, on: queue)
+		await delay(DEBOUNCE_TIMEOUT, on: queue)
 		XCTAssertFalse(fileExists(at: url))
 	}
 	
@@ -112,9 +114,45 @@ final class PrefsTests: XCTestCase {
 		prefs[\.name] = "Bubu"
 		
 		//Then
-		await delay(0.1, on: prefs.queue)
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
 		XCTAssertTrue(flags[0])
 		XCTAssertTrue(flags[1])
+	}
+	
+	func testShouldNotifyObserverOnce_onBatchChanges() async throws {
+		//Given
+		let prefs = Prefs(suite: #function, content: TestContent())
+		var count = 0
+		var store = Set<AnyCancellable>()
+		prefs.publisher.sink { _ in count += 1 }.store(in: &store)
+		defer { remove(file: prefs.url) }
+		
+		//When
+		for i in 1...10 {
+			prefs[\.name] = "Bubu \(i)"
+		}
+		
+		//Then
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
+		XCTAssertEqual(count, 1)
+	}
+	
+	func testShouldNotNotifyRedundantChanges() async throws {
+		//Given
+		let prefs = Prefs(suite: #function, content: TestContent())
+		var count = 0
+		var store = Set<AnyCancellable>()
+		prefs.publisher.sink { _ in count += 1 }.store(in: &store)
+		defer { remove(file: prefs.url) }
+		
+		//When
+		prefs[\.name] = "Bubu"
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
+		prefs[\.name] = "Bubu"
+		
+		//Then
+		await delay(DEBOUNCE_TIMEOUT, on: prefs.queue)
+		XCTAssertEqual(count, 1)
 	}
 	
 	func testShouldThrowError_whenInitWithInvalidUrl() throws {
