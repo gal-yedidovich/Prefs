@@ -12,26 +12,15 @@ typealias PrefsContent = [String: String]
 
 let logger = Logger()
 
-enum PrefsError: LocalizedError {
-	case invalidUrl
-	
-	var errorDescription: String? {
-		switch self {
-		case .invalidUrl:
-			return "invalid url, must be a local file url"
-		}
-	}
-}
-
 public class Prefs {
 	public static let standard = Prefs(suite: "_")
-
+	
 	internal let queue = DispatchQueue(label: "prefs", qos: .background)
 	internal let url: URL
 	internal let strategy: WriteStrategy
 	internal let repository: Repository
 	internal var dict: PrefsContent = [:]
-
+	
 	private let changeSubject = PassthroughSubject<Prefs, Never>()
 	
 	/// Initialize new Prefs instance with a suite name, and loading its content
@@ -141,3 +130,4 @@ public class Prefs {
 		changeSubject.eraseToAnyPublisher()
 	}
 }
+
