@@ -68,49 +68,24 @@ public class Prefs {
 		dict = try repository.read()
 	}
 	
-	/// Get a string value from `Prefs` by given key, or nil if its not found
-	/// - Parameter key: The wanted key, linked to the wanted value
-	/// - Returns: String value of the given key, or nil if its not found
-	public func string(key: Key) -> String? { dict[key.value] }
-	
-	/// Get an int value from `Prefs` by given key, or nil if not found
-	/// - Parameter key: The wanted key, linked to the wanted value
-	/// - Returns: Int value of the given key, or nil if its not found
-	public func int(key: Key) -> Int? { codable(key: key) }
-	
-	/// Get a double value from `Prefs` by given key, or nil if not found
-	/// - Parameter key: The wanted key, linked to the wanted value
-	/// - Returns: Int value of the given key, or nil if its not found
-	public func double(key: Key) -> Double? { codable(key: key) }
-	
-	/// Gets a boolean value from `Prefs` by given key, or uses the fallback value if not found
-	/// - Parameters:
-	///   - key: The wanted key, linked to the wanted value
-	///   - fallback: The default value in case the key is not found
-	/// - Returns: Bool value of the given key, or the fallback if its not found.
-	public func bool(key: Key, fallback: Bool = false) -> Bool { codable(key: key) ?? fallback }
-	
-	/// Get a date value from `Prefs` by given key, or nil if not found
-	/// - Parameter key: The wanted key, linked to the wanted value
-	/// - Returns: Date value of the given key, or nil if not found
-	public func date(key: Key) -> Date? { codable(key: key) }
-	
 	/// Get a Decodable value from `Prefs` by given key, or nil if not found
 	/// - Parameter key: The wanted key, linked to the wanted value
 	/// - Parameter type: The resulting `Decodable` type. Defaults to the inferred type from the caller.
 	/// - Returns: Some Decodable, or nil if key is not found
-	public func codable<Content: Decodable>(key: Key, as type: Content.Type = Content.self) -> Content? {
+	public func value<Key: PrefsKeyProtocol>(for key: Key) -> Key.ValueType? {
 		guard let str = dict[key.value] else { return nil }
-		if Content.self == String.self { return str as? Content }
+		if Key.ValueType.self == String.self || Key.ValueType.self == String?.self {
+			return str as? Key.ValueType
+		}
 		
 		let data = Data(str.utf8)
-		return try? JSONDecoder().decode(Content.self, from: data)
+		return try? JSONDecoder().decode(Key.ValueType.self, from: data)
 	}
 	
 	/// check if values exist for given keys.
 	/// - Parameter keys: pref keys to check
 	/// - Returns: true if all of the keys exist, otherwise false
-	public func contains(_ keys: Key...) -> Bool {
+	public func contains(_ keys: any PrefsKeyProtocol...) -> Bool {
 		keys.allSatisfy { dict[$0.value] != nil }
 	}
 	

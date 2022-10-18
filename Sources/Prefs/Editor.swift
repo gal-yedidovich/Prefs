@@ -24,7 +24,7 @@ public class Editor {
 	///   - key: target uniqe key to link to the value
 	///   - value: a value to keep in Prefs
 	/// - Returns: this instance, for method chaining
-	public func put(key: Prefs.Key, _ value: some Encodable) -> Editor {
+	public func put<Key: PrefsKeyProtocol>(key: Key, _ value: Key.ValueType) -> Editor {
 		if let str = value as? String {
 			return put(key, str)
 		}
@@ -37,14 +37,14 @@ public class Editor {
 	/// insert an uncommited removal to given key
 	/// - Parameter key: target key to remove from Prefs
 	/// - Returns: this instance, for method chaining
-	public func remove(key: Prefs.Key) -> Editor { put(key, nil) }
+	public func remove(key: some PrefsKeyProtocol) -> Editor { put(key, nil) }
 	
 	/// Reusable method to assign value to key in the changes dictionary.
 	/// - Parameters:
 	///   - key: key to assign in the changes dctionary
 	///   - value: optional string value to link to the given key, nil means to remove
 	/// - Returns: this instance, for method chaining
-	private func put(_ key: Prefs.Key, _ value: String?) -> Editor {
+	private func put(_ key: some PrefsKeyProtocol, _ value: String?) -> Editor {
 		changes[key.value] = value
 		return self
 	}

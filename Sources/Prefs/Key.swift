@@ -7,14 +7,21 @@
 
 import Foundation
 
-extension Prefs {
-	/// String wrapper for representing a key in a `Prefs` instance.
-	public struct Key {
-		let value: String
+public typealias PrefsValueType = Codable & Equatable
+public protocol PrefsKeyProtocol {
+	associatedtype ValueType: PrefsValueType
+	
+	var value: String { get }
+}
+
+public extension Prefs {
+	struct Key<V: PrefsValueType>: PrefsKeyProtocol {
+		public typealias ValueType = V
 		
-		public init(value: String) {
+		public let value: String
+		
+		public init(string value: String) {
 			self.value = value
 		}
 	}
-
 }

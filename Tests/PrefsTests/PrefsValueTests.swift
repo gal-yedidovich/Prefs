@@ -25,7 +25,7 @@ final class PrefsValueTests: XCTestCase {
 		//Then
 		XCTAssertNil(name)
 	}
-
+	
 	func testShouldBeDefaultValue_whenKeyIsMissing() {
 		//Given
 		let EXPECTED_DEFAULT_VALUE = "default value"
@@ -57,7 +57,7 @@ final class PrefsValueTests: XCTestCase {
 		age = 15
 		
 		//Then
-		XCTAssertEqual(prefs.int(key: .age), age)
+		XCTAssertEqual(prefs.value(for: .age), age)
 	}
 	
 	func testShouldRemoveFromPrefs_whenAssigningNil() {
@@ -84,9 +84,9 @@ final class PrefsValueTests: XCTestCase {
 	}
 }
 
-fileprivate extension Prefs.Key {
-	static let firstName = Prefs.Key(value: "firstName")
-	static let lastName =  Prefs.Key(value: "lastName")
-	static let isAlive = Prefs.Key(value: "isAlive")
-	static let age = Prefs.Key(value: "age")
+fileprivate extension PrefsKeyProtocol where Self == Prefs.Key<String> {
+	static var firstName: Prefs.Key<String?> { .init(string: "firstName") }
+	static var lastName: Prefs.Key<String?> { .init(string: "lastName") }
+	static var age: Prefs.Key<Int?> { .init(string: "age") }
+	static var isAlive: Prefs.Key<Bool> { .init(string: "isAlive") }
 }

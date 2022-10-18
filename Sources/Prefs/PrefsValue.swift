@@ -9,24 +9,26 @@ import SwiftUI
 import Combine
 
 @propertyWrapper
-public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
+public struct PrefsValue<Key: PrefsKeyProtocol>: DynamicProperty {
+	public typealias Value = Key.ValueType
+	
 	private let defaultValue: Value
-	private let key: Prefs.Key
+	private let key: Key
 	private let prefs: Prefs
 	@StateObject private var prefsObserver: PublisherObservableObject
 	
-	nonisolated public init(wrappedValue defValue: Value, _ key: Prefs.Key, prefs: Prefs = .standard) {
+	nonisolated public init(wrappedValue defValue: Value, _ key: Key, prefs: Prefs = .standard) {
 		self.key = key
 		self.prefs = prefs
 		self.defaultValue = defValue
 		let publisher = prefs.publisher
-			.map { prefs in prefs.codable(key: key, as: Value.self) }
+			.map { prefs in prefs.value(for: key) }
 			.removeDuplicates()
 		_prefsObserver = StateObject(wrappedValue: PublisherObservableObject(publisher: publisher))
 	}
 	
 	public var wrappedValue: Value {
-		get { prefs.codable(key: key) ?? defaultValue }
+		get { return prefs.value(for: key) ?? defaultValue }
 		nonmutating set {
 			if let optional = newValue as? AnyOptional, optional.isNil {
 				prefs.edit().remove(key: key).commit()
@@ -46,7 +48,7 @@ public struct PrefsValue<Value: Codable & Equatable>: DynamicProperty {
 
 //MARK: - Nil values
 public extension PrefsValue where Value: ExpressibleByNilLiteral {
-	init(_ key: Prefs.Key, prefs: Prefs = .standard) {
+	init(_ key: Key, prefs: Prefs = .standard) {
 		self.init(wrappedValue: nil, key, prefs: prefs)
 	}
 }

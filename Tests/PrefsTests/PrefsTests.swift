@@ -36,45 +36,45 @@ final class PrefsTests: XCTestCase {
 		defer { remove(file: prefs.url) }
 		
 		//When
-		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
+		prefs.edit().put(key: Keys.name, EXPECTED_VALUE).commit()
 		
 		//Then
-		XCTAssertEqual(prefs.string(key: .name), EXPECTED_VALUE)
+		XCTAssertEqual(prefs.value(for: Keys.name), EXPECTED_VALUE)
 		let content = try readContent(of: prefs)
-		XCTAssertEqual(content[Prefs.Key.name.value], EXPECTED_VALUE)
+		XCTAssertEqual(content[Keys.name.value], EXPECTED_VALUE)
 	}
 	
 	func testShouldReplaceValue() throws {
 		//Given
 		let EXPECTED_VALUE = "Groot"
 		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu 1"])
+		try writeContent(at: url, content: [Keys.name.value: "Bubu 1"])
 		let prefs = try Prefs(url: url, writeStrategy: .immediate)
 		defer { remove(file: url) }
 		
 		//When
-		prefs.edit().put(key: .name, EXPECTED_VALUE).commit()
+		prefs.edit().put(key: Keys.name, EXPECTED_VALUE).commit()
 		
 		//Then
-		XCTAssertEqual(prefs.string(key: .name), EXPECTED_VALUE)
+		XCTAssertEqual(prefs.value(for: Keys.name), EXPECTED_VALUE)
 		let content = try readContent(of: prefs)
-		XCTAssertEqual(content[Prefs.Key.name.value], EXPECTED_VALUE)
+		XCTAssertEqual(content[Keys.name.value], EXPECTED_VALUE)
 	}
 	
 	func testShouldRemoveValue() throws {
 		//Given
 		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu", "Key2": "some"])
+		try writeContent(at: url, content: [Keys.name.value: "Bubu", "Key2": "some"])
 		let prefs = try Prefs(url: url, writeStrategy: .immediate)
 		defer { remove(file: url) }
 		
 		//When
-		prefs.edit().remove(key: .name).commit()
+		prefs.edit().remove(key: Keys.name).commit()
 		
 		//Then
-		XCTAssertNil(prefs.string(key: .name))
+		XCTAssertNil(prefs.value(for: Keys.name))
 		let dict = try readContent(of: prefs)
-		XCTAssertNil(dict[Prefs.Key.name.value])
+		XCTAssertNil(dict[Keys.name.value])
 	}
 	
 	func testShouldClearAllValues() throws {
@@ -95,11 +95,11 @@ final class PrefsTests: XCTestCase {
 	func testShouldDeleteFileRemovingLastValue() throws {
 		//Given
 		let url: URL = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Last"])
+		try writeContent(at: url, content: [Keys.name.value: "Last"])
 		let prefs = try Prefs(url: url, writeStrategy: .immediate)
 		
 		//When
-		prefs.edit().remove(key: .name).commit()
+		prefs.edit().remove(key: Keys.name).commit()
 		
 		//Then
 		XCTAssertFalse(fileExists(at: url))
@@ -109,12 +109,12 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url = url(from: #function)
 		let EXPECTED_NUMBER = 4
-		try writeContent(at: url, content: [Prefs.Key.age.value: "\(EXPECTED_NUMBER)"])
+		try writeContent(at: url, content: [Keys.age.value: "\(EXPECTED_NUMBER)"])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let num = prefs.int(key: .age)
+		let num = prefs.value(for: Keys.age)
 		
 		//Then
 		XCTAssertEqual(num, EXPECTED_NUMBER)
@@ -124,12 +124,12 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url = url(from: #function)
 		let EXPECTED_NUMBER = 36.6
-		try writeContent(at: url, content: [Prefs.Key.temperature.value: "\(EXPECTED_NUMBER)"])
+		try writeContent(at: url, content: [Keys.temperature.value: "\(EXPECTED_NUMBER)"])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let temp = prefs.double(key: .temperature)
+		let temp = prefs.value(for: Keys.temperature)
 		
 		//Then
 		XCTAssertEqual(temp, EXPECTED_NUMBER)
@@ -139,12 +139,12 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url = url(from: #function)
 		let EXPECTED_STRING = "Deadpool"
-		try writeContent(at: url, content: [Prefs.Key.name.value: EXPECTED_STRING])
+		try writeContent(at: url, content: [Keys.name.value: EXPECTED_STRING])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let str = prefs.string(key: .name)
+		let str = prefs.value(for: Keys.name)
 		
 		//Then
 		XCTAssertEqual(str, EXPECTED_STRING)
@@ -154,43 +154,28 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url = url(from: #function)
 		let EXPECTED_BOOL = true
-		try writeContent(at: url, content: [Prefs.Key.isAlive.value: "\(EXPECTED_BOOL)"])
+		try writeContent(at: url, content: [Keys.isAlive.value: "\(EXPECTED_BOOL)"])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let bool = prefs.bool(key: .isAlive)
+		let bool = prefs.value(for: Keys.isAlive)
 		
 		//Then
 		XCTAssertEqual(bool, EXPECTED_BOOL)
 	}
 	
-	func testShouldReadBoolFallback() throws {
-		//Given
-		let url = url(from: #function)
-		try writeContent(at: url, content: [:])
-		let prefs = try Prefs(url: url)
-		defer { remove(file: url) }
-		
-		//When
-		let bool = prefs.bool(key: .isAlive)
-		
-		//Then
-		XCTAssertFalse(bool)
-	}
-	
 	func testShouldReadCodable() throws {
 		//Given
-		struct Payload: Codable, Equatable { var field: String }
 		let EXPECTED_PAYLOAD: Payload = Payload(field: "Some Value")
 		let payloadString = try String(decoding: JSONEncoder().encode(EXPECTED_PAYLOAD), as: UTF8.self)
 		let url = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.payload.value: payloadString])
+		try writeContent(at: url, content: [Keys.payload.value: payloadString])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let payload = prefs.codable(key: .payload, as: Payload.self)
+		let payload = prefs.value(for: Keys.payload)
 		
 		//Then
 		XCTAssertEqual(payload, EXPECTED_PAYLOAD)
@@ -202,27 +187,21 @@ final class PrefsTests: XCTestCase {
 		let prefs = try Prefs(url: url)
 		
 		//When
-		let string = prefs.string(key: .age)
-		let num = prefs.int(key: .age)
-		let bool = prefs.bool(key: .age)
-		let codable = prefs.codable(key: .age, as: [String].self)
+		let value = prefs.value(for: Keys.age)
 		
 		//Then
-		XCTAssertNil(string)
-		XCTAssertNil(num)
-		XCTAssertFalse(bool)
-		XCTAssertNil(codable)
+		XCTAssertNil(value)
 	}
 	
 	func testShouldReturnTrue_whenContainsValue() throws {
 		//Given
 		let url = url(from: #function)
-		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu"])
+		try writeContent(at: url, content: [Keys.name.value: "Bubu"])
 		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
-		let valueExists = prefs.contains(.name)
+		let valueExists = prefs.contains(Keys.name)
 		
 		//Then
 		XCTAssertTrue(valueExists)
@@ -234,7 +213,7 @@ final class PrefsTests: XCTestCase {
 		let prefs = try Prefs(url: url)
 		
 		//When
-		let valueExists = prefs.contains(.name)
+		let valueExists = prefs.contains(Keys.name)
 		
 		//Then
 		XCTAssertFalse(valueExists)
@@ -259,7 +238,7 @@ final class PrefsTests: XCTestCase {
 			for i in 1...5 {
 				group.addTask {
 					prefs.edit()
-						.put(key: Prefs.Key(value: "key - \(i)"), i)
+						.put(key: Prefs.Key<Int>(string: "key - \(i)"), i)
 						.commit()
 				}
 			}
@@ -277,25 +256,25 @@ final class PrefsTests: XCTestCase {
 		let url = url(from: #function)
 		let EXPECTED_BATCH_DELAY = 0.01
 		let EXPECTED_CONTENT: PrefsContent = [
-			Prefs.Key.name.value: "Bubu",
-			Prefs.Key.age.value: "10"
+			Keys.name.value: "Bubu",
+			Keys.age.value: "10"
 		]
 		let prefs = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
 		defer { remove(file: url) }
 		
 		//When
 		prefs.edit()
-			.put(key: .name, "Bubu")
+			.put(key: Keys.name, "Bubu")
 			.commit()
 		
 		prefs.edit()
-			.put(key: .age, 10)
+			.put(key: Keys.age, 10)
 			.commit()
 		
 		
 		//Then
-		XCTAssertEqual(prefs.string(key: .name), "Bubu")
-		XCTAssertEqual(prefs.int(key: .age), 10)
+		XCTAssertEqual(prefs.value(for: Keys.name), "Bubu")
+		XCTAssertEqual(prefs.value(for: Keys.age), 10)
 		XCTAssertFalse(fileExists(at: url))
 		
 		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
@@ -313,7 +292,7 @@ final class PrefsTests: XCTestCase {
 		
 		//When
 		prefs?.edit()
-			.put(key: .name, "To be cancelled")
+			.put(key: Keys.name, "To be cancelled")
 			.commit()
 		prefs = nil
 		
@@ -336,7 +315,7 @@ final class PrefsTests: XCTestCase {
 		
 		//When
 		prefs.edit()
-			.put(key: .name, "Bubu")
+			.put(key: Keys.name, "Bubu")
 			.commit();
 		
 		//Then
@@ -406,10 +385,14 @@ func url(from name: String) -> URL {
 
 fileprivate typealias TestHandler = ([String:String]) -> Void
 
-fileprivate extension Prefs.Key {
-	static let name = Prefs.Key(value: "name")
-	static let age = Prefs.Key(value: "age")
-	static let temperature = Prefs.Key(value: "temperature")
-	static let isAlive = Prefs.Key(value: "isAlive")
-	static let payload = Prefs.Key(value: "payload")
+fileprivate enum Keys {
+	static var name: Prefs.Key<String> { .init(string: "name") }
+	static var age: Prefs.Key<Int> { .init(string: "age") }
+	static var temperature: Prefs.Key<Double> { .init(string: "temperature") }
+	static var isAlive: Prefs.Key<Bool> { .init(string: "isAlive") }
+	static var payload: Prefs.Key<Payload> { .init(string: "payload") }
+}
+
+fileprivate struct Payload: Codable, Equatable {
+	var field: String
 }
