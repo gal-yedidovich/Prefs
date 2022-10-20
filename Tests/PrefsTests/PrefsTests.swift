@@ -17,7 +17,7 @@ final class PrefsTests: XCTestCase {
 	func testShouldLoadValuesOnInit() throws {
 		//Given
 		let url: URL = url(from: #function)
-		let EXPECTED_CONTENT: [String: String] = ["Key": "Bubu"]
+		let EXPECTED_CONTENT: PrefsContent = ["Key": "Bubu"]
 		try writeContent(at: url, content: EXPECTED_CONTENT)
 		defer { remove(file: url) }
 		
@@ -258,9 +258,7 @@ final class PrefsTests: XCTestCase {
 		await withTaskGroup(of: Void.self, body: { group in
 			for i in 1...5 {
 				group.addTask {
-					prefs.edit()
-						.put(key: Prefs.Key(value: "key - \(i)"), i)
-						.commit()
+					prefs.edit().put(key: Prefs.Key(value: "key - \(i)"), i).commit()
 				}
 			}
 		})
@@ -284,13 +282,8 @@ final class PrefsTests: XCTestCase {
 		defer { remove(file: url) }
 		
 		//When
-		prefs.edit()
-			.put(key: .name, "Bubu")
-			.commit()
-		
-		prefs.edit()
-			.put(key: .age, 10)
-			.commit()
+		prefs.edit().put(key: .name, "Bubu").commit()
+		prefs.edit().put(key: .age, 10).commit()
 		
 		
 		//Then
@@ -335,9 +328,7 @@ final class PrefsTests: XCTestCase {
 		prefs.publisher.sink { _ in flags[1] = true }.store(in: &store)
 		
 		//When
-		prefs.edit()
-			.put(key: .name, "Bubu")
-			.commit();
+		prefs.edit().put(key: .name, "Bubu").commit();
 		
 		//Then
 		XCTAssertTrue(flags[0])
