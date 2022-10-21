@@ -18,7 +18,7 @@ internal struct Commit {
 
 internal let DEFAULT_BATCH_DELAY = 0.1
 
-public extension Prefs {
+extension Prefs {
 	/// The Strategy of writing the prefs to storage.
 	///
 	/// There are two Strategies:

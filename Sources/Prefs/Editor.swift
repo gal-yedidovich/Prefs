@@ -24,7 +24,7 @@ public class Editor {
 	///   - key: target uniqe key to link to the value
 	///   - value: a value to keep in Prefs
 	/// - Returns: this instance, for method chaining
-	public func put(key: Prefs.Key, _ value: some Encodable) -> Editor {
+	public func put(key: Prefs.Key, _ value: some Codable & Equatable) -> Editor {
 		if let str = value as? String {
 			return put(key, str)
 		}
