@@ -15,10 +15,10 @@ let logger = Logger()
 public class Prefs {
 	public static let standard = Prefs(suite: "_")
 	
-	internal let queue = DispatchQueue(label: "prefs", qos: .background)
+	internal let dispatcher: Dispatcher
 	internal let url: URL
-	internal let strategy: WriteStrategy
 	internal let repository: Repository
+	internal let committer = BatchCommitter()
 	internal var dict: PrefsContent = [:]
 	
 	private let changeSubject = PassthroughSubject<Prefs, Never>()
@@ -34,20 +34,20 @@ public class Prefs {
 	/// Initialize new Prefs instance link to a given url, and loading its content
 	/// - Parameter url: filepath in filesystem
 	public convenience init(url: URL) throws {
-		try self.init(url: url, writeStrategy: .batch)
+		try self.init(url: url, dispatcher: QueueDispatcher())
 	}
 	
 	/// Initialize new Prefs instance link to a given url and a writing strartegy, and loading its content
 	/// - Parameter url: filepath in filesystem,
 	/// - Parameter writeStrategy: Strategy for writing to the filesystem
-	internal init(url: URL, writeStrategy: WriteStrategyType = .batch) throws {
+	internal init(url: URL, dispatcher: Dispatcher) throws {
 		guard url.isFileURL else {
 			throw PrefsError.invalidUrl
 		}
 		
 		self.url = url
-		self.strategy = writeStrategy.createStrategy()
 		self.repository = EncryptedFileRepository(url: url)
+		self.dispatcher = dispatcher
 		
 		tryLoadContent()
 	}
@@ -121,7 +121,7 @@ public class Prefs {
 	/// write commit and alert all subscribers that changes were made.
 	/// - Parameter commit: The commited changes to be made.
 	internal func apply(_ commit: Commit) {
-		strategy.commit(commit, to: self)
+		committer.commit(commit, to: self)
 		changeSubject.send(self)
 	}
 	
@@ -130,4 +130,3 @@ public class Prefs {
 		changeSubject.eraseToAnyPublisher()
 	}
 }
-

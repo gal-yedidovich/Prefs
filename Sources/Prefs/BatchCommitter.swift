@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  BatchCommitter.swift
 //  
 //
 //  Created by Gal Yedidovich on 27/09/2022.
@@ -7,69 +7,23 @@
 
 import Foundation
 
-internal protocol WriteStrategy {
-	func commit(_ commit: Commit, to prefs: Prefs)
-}
-
 internal struct Commit {
 	let changes: [String: String?]
 	let clearFlag: Bool
 }
 
-internal let DEFAULT_BATCH_DELAY = 0.1
-
-extension Prefs {
-	/// The Strategy of writing the prefs to storage.
-	///
-	/// There are two Strategies:
-	///  - `immediate`: writes every commit immediately to storage, it will consume more resources when when applying large number of commits.
-	///  - `batch`: writes all applied commits after a delay, it will reduce 'write' calls to the file-system when applying large number of commits.
-	enum WriteStrategyType {
-		/// Write every commit immediately to storage
-		case immediate
-		/// Batch commits together after a defined delay
-		case batch(delay: Double)
-		
-		/// default batch strategy with delay of 0.1 seconds
-		public static let batch = Self.batch(delay: DEFAULT_BATCH_DELAY)
-		
-		internal func createStrategy() -> any WriteStrategy {
-			switch self {
-			case .immediate:
-				return ImmediateWriteStrategy()
-			case .batch(let delay):
-				return BatchWriteStrategy(delay: delay)
-			}
-		}
-	}
-}
-
-fileprivate struct ImmediateWriteStrategy: WriteStrategy {
-	func commit(_ commit: Commit, to prefs: Prefs) {
-		prefs.queue.sync {
-			prefs.assign(commit)
-			prefs.writeOrDelete()
-		}
-	}
-}
-
-fileprivate class BatchWriteStrategy: WriteStrategy {
-	private let delay: Double
+internal class BatchCommitter {
 	private var triggered = false
-	
-	init(delay: Double) {
-		self.delay = delay
-	}
-	
+
 	func commit(_ commit: Commit, to prefs: Prefs) {
-		prefs.queue.sync {
+		prefs.dispatcher.sync {
 			prefs.assign(commit)
 			if triggered { return }
-			
+
 			triggered = true
-			prefs.queue.asyncAfter(deadline: .now() + delay) { [weak self, weak prefs] in
-				guard let self = self, let prefs = prefs else { return }
-				
+			prefs.dispatcher.async(delay: 0.1) { [weak self, weak prefs] in
+				guard let self, let prefs else { return }
+
 				self.triggered = false
 				prefs.writeOrDelete()
 			}

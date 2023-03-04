@@ -31,7 +31,7 @@ final class PrefsTests: XCTestCase {
 	func testShouldInsertValue() throws {
 		//Given
 		let url: URL = url(from: #function)
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, dispatcher: MockDispatcher())
 		let EXPECTED_VALUE = "Bubu"
 		defer { remove(file: prefs.url) }
 		
@@ -49,7 +49,7 @@ final class PrefsTests: XCTestCase {
 		let EXPECTED_VALUE = "Groot"
 		let url: URL = url(from: #function)
 		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu 1"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, dispatcher: MockDispatcher())
 		defer { remove(file: url) }
 		
 		//When
@@ -65,7 +65,7 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url: URL = url(from: #function)
 		try writeContent(at: url, content: [Prefs.Key.name.value: "Bubu", "Key2": "some"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, dispatcher: MockDispatcher())
 		defer { remove(file: url) }
 		
 		//When
@@ -81,7 +81,7 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url = url(from: #function)
 		try writeContent(at: url, content: ["Key": "Bubu", "Key 2": "4"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, dispatcher: MockDispatcher())
 		defer { remove(file: url) }
 		
 		//When
@@ -96,7 +96,7 @@ final class PrefsTests: XCTestCase {
 		//Given
 		let url: URL = url(from: #function)
 		try writeContent(at: url, content: [Prefs.Key.name.value: "Last"])
-		let prefs = try Prefs(url: url, writeStrategy: .immediate)
+		let prefs = try Prefs(url: url, dispatcher: MockDispatcher())
 		
 		//When
 		prefs.edit().remove(key: .name).commit()
@@ -243,8 +243,8 @@ final class PrefsTests: XCTestCase {
 	func testShouldHandleParallelWrite() async throws {
 		//Given
 		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
-		let prefs = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
+		let EXPECTED_BATCH_DELAY = 0.1
+		let prefs = try Prefs(url: url)
 		let EXPECTED_COTENT: PrefsContent = [
 			"key - 1": "1",
 			"key - 2": "2",
@@ -265,7 +265,7 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		XCTAssertEqual(prefs.dict, EXPECTED_COTENT)
-		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		await delay(EXPECTED_BATCH_DELAY, on: prefs.dispatcher)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_COTENT)
 	}
@@ -273,12 +273,12 @@ final class PrefsTests: XCTestCase {
 	func testShouldBatchCommits() async throws {
 		//Given
 		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
+		let EXPECTED_BATCH_DELAY = 0.1
 		let EXPECTED_CONTENT: PrefsContent = [
 			Prefs.Key.name.value: "Bubu",
 			Prefs.Key.age.value: "10"
 		]
-		let prefs = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
+		let prefs = try Prefs(url: url)
 		defer { remove(file: url) }
 		
 		//When
@@ -291,7 +291,7 @@ final class PrefsTests: XCTestCase {
 		XCTAssertEqual(prefs.int(key: .age), 10)
 		XCTAssertFalse(fileExists(at: url))
 		
-		await delay(EXPECTED_BATCH_DELAY, on: prefs.queue)
+		await delay(EXPECTED_BATCH_DELAY, on: prefs.dispatcher)
 		let content = try readContent(of: prefs)
 		XCTAssertEqual(content, EXPECTED_CONTENT)
 	}
@@ -299,9 +299,9 @@ final class PrefsTests: XCTestCase {
 	func testShouldCancelBatchWrite_whenDeinitBeforeTimeout() async throws {
 		//Given
 		let url = url(from: #function)
-		let EXPECTED_BATCH_DELAY = 0.01
-		var prefs: Prefs? = try Prefs(url: url, writeStrategy: .batch(delay: EXPECTED_BATCH_DELAY))
-		let queue = prefs!.queue
+		let EXPECTED_BATCH_DELAY = 0.1
+		var prefs: Prefs? = try Prefs(url: url)
+		let dispatcher = prefs!.dispatcher
 		defer { remove(file: url) }
 		
 		//When
@@ -312,7 +312,7 @@ final class PrefsTests: XCTestCase {
 		
 		//Then
 		let e = XCTestExpectation(description: "waiting for batch timeout")
-		queue.asyncAfter(deadline: .now() + EXPECTED_BATCH_DELAY) {
+		dispatcher.async(delay: EXPECTED_BATCH_DELAY) {
 			XCTAssertFalse(fileExists(at: url))
 			e.fulfill()
 		}
@@ -365,9 +365,9 @@ func writeContent(at url: URL, content: PrefsContent) throws {
 	try endData.write(to: url)
 }
 
-func delay(_ delay: Double, on queue: DispatchQueue) async {
+func delay(_ delay: Double, on dispatcher: Dispatcher) async {
 	return await withUnsafeContinuation { continuation in
-		queue.asyncAfter(deadline: .now() + delay) {
+		dispatcher.async(delay: delay) {
 			continuation.resume()
 		}
 	}
@@ -375,11 +375,11 @@ func delay(_ delay: Double, on queue: DispatchQueue) async {
 
 func readContent(of prefs: Prefs) throws -> PrefsContent {
 	let encryptor = SimpleEncryptor(type: .gcm)
-	return try prefs.queue.sync {
-		let encData = try Data(contentsOf: prefs.url)
-		let data = try encryptor.decrypt(data: encData)
-		return try JSONDecoder().decode(PrefsContent.self, from: data)
-	}
+//	return try prefs.queue.sync {
+	let encData = try Data(contentsOf: prefs.url)
+	let data = try encryptor.decrypt(data: encData)
+	return try JSONDecoder().decode(PrefsContent.self, from: data)
+//	}
 }
 
 func remove(file url: URL) {
