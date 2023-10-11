@@ -316,7 +316,7 @@ final class PrefsTests: XCTestCase {
 			XCTAssertFalse(fileExists(at: url))
 			e.fulfill()
 		}
-		wait(for: [e], timeout: 10)
+		await fulfillment(of: [e], timeout: 10)
 	}
 	
 	func testShouldObserveChanges() throws {
